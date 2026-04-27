@@ -1,61 +1,50 @@
 # FlexGrid-TR Architecture
 
-FlexGrid-TR is intentionally small, but its boundaries are shaped like a real product. Scenario inputs are handled once, the simulation core produces a structured result, and both the UI and export route consume that same result.
+FlexGrid-TR is a hybrid-ready software demonstrator. The current release does not require physical hardware, but the data boundaries are shaped so a real telemetry channel can replace the mock samples later.
 
 ```mermaid
 flowchart LR
-    A["Scenario inputs\nFacility, tariff, EV sessions, storage, strategy"] --> B["Simulation engine\nsrc/lib/energy/flexgrid.ts"]
-    B --> C["Operator cockpit\ncomponents/energy"]
-    B --> D["JSON / CSV export\napp/api/scenario"]
-    C --> E["Portfolio demo\nInteractive dashboard"]
-    D --> F["Reports\nSpreadsheet-ready scenario output"]
+    A["Scenario inputs\nFacility, tariff, EV sessions, storage, strategy"] --> B["Simulation engine\nkW, kVA, current, SoC, cost, carbon"]
+    B --> C["Operator cockpit\nSaved scenarios, charts, report"]
+    B --> D["Scenario API\nJSON and CSV"]
+    B --> E["Telemetry comparison\nMock or measured samples"]
+    E --> F["Telemetry API\nMAE, peak error, confidence"]
 ```
 
-## Layers
+## Runtime layers
 
-### Application entry
+- The UI owns interaction state: selected scenario, saved local scenarios, shareable URL parameters, and mock telemetry display.
+- The simulation engine owns engineering truth: load profile generation, battery behavior, transformer loading, cost, carbon, and confidence scoring.
+- The telemetry module owns measured-vs-simulated comparison and can be reused by the UI and API.
+- The API layer is stateless and deterministic, which keeps the project easy to run from GitHub.
 
-- `app/page.tsx`
-- `app/layout.tsx`
+## Engineering model
 
-The app starts directly with the cockpit instead of a marketing-first landing page.
+The model estimates:
 
-### Cockpit UI
+- active power in `kW`
+- apparent power in `kVA`
+- transformer loading percentage
+- three-phase current at nominal 400 V service
+- site-level power factor
+- battery charge/discharge and state of charge
+- peak-event reduction
+- daily energy, monthly cost, and carbon impact
+- engineering confidence score
 
-- `components/energy/flexgrid-page.tsx`
-- `components/energy/flexgrid-simulator.tsx`
+The model is not a power-flow solver. It is intentionally a transparent portfolio-grade simulator that makes assumptions explicit and testable.
 
-This layer renders controls, KPI tiles, charts, recommendations, and roadmap sections.
+## Telemetry boundary
 
-### Simulation engine
+`POST /api/telemetry` accepts scenario parameters plus measured samples. In `mock` mode, it generates deterministic samples from the selected scenario. In measured mode, the endpoint validates the payload and compares the measured profile with the simulated dispatch.
 
-- `src/lib/energy/flexgrid.ts`
+This is the planned replacement point for:
 
-The engine owns:
+- ESP32 HTTP posts
+- MQTT bridge output
+- smart-plug export files
+- manually collected measurement data
 
-- site profiles
-- tariff plans
-- strategy options
-- storage assumptions
-- hourly load profile generation
-- cost, carbon, and stress metrics
-- strategy comparison
-- recommendations
+## Storage decision
 
-### Export layer
-
-- `app/api/scenario/route.ts`
-
-The API returns full JSON by default and spreadsheet-ready CSV when `format=csv` is passed.
-
-## Design decision
-
-The first complete release stays simulation-first. This keeps the project easy to run from GitHub while still leaving a clear path to physical telemetry. A single measured channel can be added later without rewriting the cockpit or the scenario output model.
-
-## Extension points
-
-- Add telemetry ingestion route
-- Persist scenario runs
-- Compare measured and simulated profiles
-- Add EV departure-time prioritization
-- Add ENVER-style reporting output
+Scenario persistence uses browser localStorage under `flexgrid-tr:v1:scenarios`. This avoids database setup while still giving the demo a product-like workflow. The backend stays stateless.

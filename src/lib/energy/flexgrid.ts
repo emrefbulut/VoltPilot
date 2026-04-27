@@ -10,6 +10,10 @@ export type FlexgridSiteProfile = {
   baseLoadKw: number;
   dailyKwh: number;
   transformerLimitKw: number;
+  transformerLimitKva: number;
+  nominalVoltageV: number;
+  phaseCount: 1 | 3;
+  powerFactor: number;
   demandResponseFit: number;
   shiftableShare: number;
   carbonIntensityKgPerKwh: number;
@@ -29,21 +33,31 @@ export type FlexgridScenarioPoint = {
   hour: string;
   hourIndex: number;
   totalLoadKw: number;
+  totalKva: number;
   baselineLoadKw: number;
+  baselineKva: number;
   buildingLoadKw: number;
   evLoadKw: number;
   thermalLoadKw: number;
   batteryKw: number;
+  batterySocPct: number;
   flexibleLoadKw: number;
   transformerLimitKw: number;
+  transformerLimitKva: number;
+  transformerLoadingPct: number;
+  estimatedCurrentA: number;
   tariffTlPerKwh: number;
   carbonKg: number;
+  overloaded: boolean;
 };
 
 export type FlexgridScenarioMetrics = {
   peakKw: number;
+  peakKva: number;
   baselinePeakKw: number;
+  baselinePeakKva: number;
   peakReductionPct: number;
+  peakEventReductionKw: number;
   dailyEnergyKwh: number;
   baselineDailyEnergyKwh: number;
   monthlyCostTl: number;
@@ -52,9 +66,20 @@ export type FlexgridScenarioMetrics = {
   carbonKgDaily: number;
   carbonReductionPct: number;
   readinessScore: number;
+  engineeringConfidence: number;
   transformerStress: number;
+  transformerLimitKva: number;
+  maxCurrentA: number;
+  nominalVoltageV: number;
+  powerFactor: number;
+  overloadHours: number;
   shiftedEnergyPct: number;
   batteryDischargeKwh: number;
+  batteryChargeKwh: number;
+  batteryEfficiencyLossKwh: number;
+  batterySocMinPct: number;
+  batterySocFinalPct: number;
+  batteryRoundTripEfficiencyPct: number;
   evEnergyKwh: number;
 };
 
@@ -76,9 +101,11 @@ export type FlexgridComparison = {
   strategy: FlexgridStrategy;
   label: string;
   peakKw: number;
+  peakKva: number;
   monthlyCostTl: number;
   monthlySavingsTl: number;
   readinessScore: number;
+  engineeringConfidence: number;
 };
 
 export type FlexgridScenario = {
@@ -99,6 +126,10 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     baseLoadKw: 11,
     dailyKwh: 208,
     transformerLimitKw: 42,
+    transformerLimitKva: 50,
+    nominalVoltageV: 400,
+    phaseCount: 3,
+    powerFactor: 0.91,
     demandResponseFit: 62,
     shiftableShare: 0.24,
     carbonIntensityKgPerKwh: 0.43,
@@ -111,6 +142,10 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     baseLoadKw: 18,
     dailyKwh: 312,
     transformerLimitKw: 58,
+    transformerLimitKva: 70,
+    nominalVoltageV: 400,
+    phaseCount: 3,
+    powerFactor: 0.9,
     demandResponseFit: 78,
     shiftableShare: 0.33,
     carbonIntensityKgPerKwh: 0.45,
@@ -123,6 +158,10 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     baseLoadKw: 14,
     dailyKwh: 256,
     transformerLimitKw: 46,
+    transformerLimitKva: 55,
+    nominalVoltageV: 400,
+    phaseCount: 3,
+    powerFactor: 0.92,
     demandResponseFit: 69,
     shiftableShare: 0.27,
     carbonIntensityKgPerKwh: 0.44,
@@ -135,6 +174,10 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     baseLoadKw: 16,
     dailyKwh: 288,
     transformerLimitKw: 52,
+    transformerLimitKva: 63,
+    nominalVoltageV: 400,
+    phaseCount: 3,
+    powerFactor: 0.93,
     demandResponseFit: 73,
     shiftableShare: 0.3,
     carbonIntensityKgPerKwh: 0.42,
@@ -169,10 +212,11 @@ export const flexgridBatteryOptions: Array<{
   id: FlexgridBatteryMode;
   label: string;
   capacityKwh: number;
+  maxPowerKw: number;
 }> = [
-  { id: "none", label: "No battery", capacityKwh: 0 },
-  { id: "small", label: "Small battery", capacityKwh: 12 },
-  { id: "medium", label: "Medium battery", capacityKwh: 28 }
+  { id: "none", label: "No battery", capacityKwh: 0, maxPowerKw: 0 },
+  { id: "small", label: "Small battery", capacityKwh: 12, maxPowerKw: 3 },
+  { id: "medium", label: "Medium battery", capacityKwh: 28, maxPowerKw: 6 }
 ];
 
 export const flexgridTariffOptions: Array<{
@@ -205,6 +249,9 @@ export const defaultFlexgridScenario: FlexgridScenarioInput = {
   evCount: 4
 };
 
+const BATTERY_CHARGE_EFFICIENCY = 0.92;
+const BATTERY_DISCHARGE_EFFICIENCY = 0.9;
+
 function round(value: number, precision = 1) {
   const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
@@ -218,7 +265,7 @@ function isPeakHour(hour: number, peakHours: [number, number]) {
   return hour >= peakHours[0] && hour <= peakHours[1];
 }
 
-function tariffForHour(hour: number, plan: FlexgridTariffPlan, peakHours: [number, number]) {
+export function getFlexgridTariffForHour(hour: number, plan: FlexgridTariffPlan, peakHours: [number, number]) {
   if (plan === "flat") {
     return 5.9;
   }
@@ -252,24 +299,40 @@ function carbonIntensityForHour(hour: number, baseIntensity: number) {
   return baseIntensity;
 }
 
-function batteryCapacity(mode: FlexgridBatteryMode) {
-  return flexgridBatteryOptions.find((option) => option.id === mode)?.capacityKwh ?? 0;
+function batteryOption(mode: FlexgridBatteryMode) {
+  return flexgridBatteryOptions.find((option) => option.id === mode) ?? flexgridBatteryOptions[0]!;
+}
+
+export function calculateFlexgridKva(kw: number, powerFactor: number) {
+  return kw / Math.max(0.1, powerFactor);
+}
+
+export function calculateFlexgridCurrentA(kva: number, voltageV: number, phaseCount: 1 | 3) {
+  if (phaseCount === 3) {
+    return (kva * 1000) / (Math.sqrt(3) * voltageV);
+  }
+
+  return (kva * 1000) / voltageV;
+}
+
+export function calculateTransformerLoadingPct(loadKva: number, transformerLimitKva: number) {
+  return (loadKva / Math.max(transformerLimitKva, 1)) * 100;
 }
 
 function buildChart(input: FlexgridScenarioInput, strategyOverride?: FlexgridStrategy) {
   const strategy = strategyOverride ?? input.strategy;
   const profile = flexgridSiteProfiles[input.siteType];
-  const capacityKwh = batteryCapacity(input.batteryMode);
-  const batteryPeakSupportKw = input.batteryMode === "none" ? 0 : input.batteryMode === "small" ? 2.4 : 5.2;
+  const battery = batteryOption(input.batteryMode);
   const flexibleBoost = strategy === "baseline" ? 0 : strategy === "tou" ? 0.12 : 0.24;
   const thermalRelief = strategy === "baseline" ? 0 : strategy === "tou" ? 0.08 : 0.16;
   const coordinationRelief = strategy === "orchestrated" ? 0.14 : strategy === "tou" ? 0.06 : 0;
+  let batterySocKwh = battery.capacityKwh * 0.58;
 
   return profile.hourlyShape.map((shape, hour) => {
     const peak = isPeakHour(hour, profile.peakHours);
     const night = hour <= 6 || hour >= 23;
     const solarWindow = hour >= 10 && hour <= 15;
-    const tariffTlPerKwh = tariffForHour(hour, input.tariffPlan, profile.peakHours);
+    const tariffTlPerKwh = getFlexgridTariffForHour(hour, input.tariffPlan, profile.peakHours);
     const buildingLoadKw = profile.baseLoadKw * shape;
     const baselineThermalKw = buildingLoadKw * (peak ? 0.2 : 0.12);
     const thermalLoadKw = baselineThermalKw * (peak ? 1 - thermalRelief : 1);
@@ -284,9 +347,29 @@ function buildChart(input: FlexgridScenarioInput, strategyOverride?: FlexgridStr
       evLoadKw = night || solarWindow ? input.evCount * 2.8 : peak ? input.evCount * 0.65 : input.evCount * 0.85;
     }
 
-    const batteryKw = peak && capacityKwh > 0 ? batteryPeakSupportKw : solarWindow && capacityKwh > 0 ? -1.1 : 0;
-    const totalLoadKw = Math.max(buildingLoadKw + thermalLoadKw + evLoadKw - Math.max(0, batteryKw), profile.baseLoadKw * 0.22);
+    let batteryKw = 0;
+    if (strategy !== "baseline" && battery.capacityKwh > 0 && peak) {
+      const availableOutputKw = batterySocKwh * BATTERY_DISCHARGE_EFFICIENCY;
+      batteryKw = Math.min(battery.maxPowerKw, availableOutputKw);
+      batterySocKwh = Math.max(0, batterySocKwh - batteryKw / BATTERY_DISCHARGE_EFFICIENCY);
+    } else if (strategy === "orchestrated" && battery.capacityKwh > 0 && (solarWindow || night)) {
+      const remainingCapacityKwh = battery.capacityKwh - batterySocKwh;
+      const chargeInputKw = Math.min(1.6, battery.maxPowerKw, remainingCapacityKwh / BATTERY_CHARGE_EFFICIENCY);
+      batteryKw = -Math.max(0, chargeInputKw);
+      batterySocKwh = Math.min(battery.capacityKwh, batterySocKwh + Math.max(0, chargeInputKw) * BATTERY_CHARGE_EFFICIENCY);
+    }
+
+    const chargeLoadKw = Math.max(0, -batteryKw);
+    const dischargeSupportKw = Math.max(0, batteryKw);
+    const totalLoadKw = Math.max(
+      buildingLoadKw + thermalLoadKw + evLoadKw + chargeLoadKw - dischargeSupportKw,
+      profile.baseLoadKw * 0.22
+    );
     const baselineLoadKw = buildingLoadKw + baselineThermalKw + baselineEvKw;
+    const totalKva = calculateFlexgridKva(totalLoadKw, profile.powerFactor);
+    const baselineKva = calculateFlexgridKva(baselineLoadKw, profile.powerFactor);
+    const transformerLoadingPct = calculateTransformerLoadingPct(totalKva, profile.transformerLimitKva);
+    const estimatedCurrentA = calculateFlexgridCurrentA(totalKva, profile.nominalVoltageV, profile.phaseCount);
     const flexibleLoadKw = Math.max(totalLoadKw * (profile.shiftableShare + flexibleBoost + coordinationRelief), 0);
     const carbonKg = totalLoadKw * carbonIntensityForHour(hour, profile.carbonIntensityKgPerKwh);
 
@@ -294,43 +377,72 @@ function buildChart(input: FlexgridScenarioInput, strategyOverride?: FlexgridStr
       hour: `${hour.toString().padStart(2, "0")}:00`,
       hourIndex: hour,
       totalLoadKw: round(totalLoadKw),
+      totalKva: round(totalKva),
       baselineLoadKw: round(baselineLoadKw),
+      baselineKva: round(baselineKva),
       buildingLoadKw: round(buildingLoadKw),
       evLoadKw: round(evLoadKw),
       thermalLoadKw: round(thermalLoadKw),
       batteryKw: round(batteryKw),
+      batterySocPct: battery.capacityKwh > 0 ? Math.round((batterySocKwh / battery.capacityKwh) * 100) : 0,
       flexibleLoadKw: round(flexibleLoadKw),
       transformerLimitKw: profile.transformerLimitKw,
+      transformerLimitKva: profile.transformerLimitKva,
+      transformerLoadingPct: Math.round(transformerLoadingPct),
+      estimatedCurrentA: Math.round(estimatedCurrentA),
       tariffTlPerKwh: round(tariffTlPerKwh, 2),
-      carbonKg: round(carbonKg, 2)
+      carbonKg: round(carbonKg, 2),
+      overloaded: transformerLoadingPct > 100
     };
   });
 }
 
+function buildEngineeringConfidence(input: FlexgridScenarioInput, transformerStress: number, overloadHours: number) {
+  const strategyBonus = input.strategy === "orchestrated" ? 9 : input.strategy === "tou" ? 4 : 0;
+  const batteryBonus = input.batteryMode === "none" ? 0 : input.batteryMode === "small" ? 3 : 5;
+  const stressPenalty = transformerStress > 100 ? 18 : transformerStress > 90 ? 10 : transformerStress > 75 ? 4 : 0;
+  const overloadPenalty = overloadHours * 3;
+
+  return Math.min(98, Math.max(35, Math.round(76 + strategyBonus + batteryBonus - stressPenalty - overloadPenalty)));
+}
+
 function buildMetrics(input: FlexgridScenarioInput, chart: FlexgridScenarioPoint[]): FlexgridScenarioMetrics {
   const profile = flexgridSiteProfiles[input.siteType];
+  const battery = batteryOption(input.batteryMode);
   const totalEnergy = sum(chart.map((point) => point.totalLoadKw));
   const baselineEnergy = sum(chart.map((point) => point.baselineLoadKw));
   const monthlyCost = sum(chart.map((point) => point.totalLoadKw * point.tariffTlPerKwh)) * 30;
   const baselineMonthlyCost = sum(chart.map((point) => point.baselineLoadKw * point.tariffTlPerKwh)) * 30;
   const peakKw = Math.max(...chart.map((point) => point.totalLoadKw));
+  const peakKva = Math.max(...chart.map((point) => point.totalKva));
   const baselinePeakKw = Math.max(...chart.map((point) => point.baselineLoadKw));
+  const baselinePeakKva = Math.max(...chart.map((point) => point.baselineKva));
   const batteryDischargeKwh = sum(chart.map((point) => Math.max(0, point.batteryKw)));
+  const batteryChargeKwh = sum(chart.map((point) => Math.max(0, -point.batteryKw)));
+  const batteryEfficiencyLossKwh = Math.max(
+    0,
+    batteryChargeKwh * BATTERY_CHARGE_EFFICIENCY - batteryDischargeKwh / BATTERY_DISCHARGE_EFFICIENCY
+  );
   const evEnergyKwh = sum(chart.map((point) => point.evLoadKw));
   const carbonKgDaily = sum(chart.map((point) => point.carbonKg));
   const baselineCarbonKgDaily = sum(
     chart.map((point) => point.baselineLoadKw * carbonIntensityForHour(point.hourIndex, profile.carbonIntensityKgPerKwh))
   );
-  const transformerStress = (peakKw / profile.transformerLimitKw) * 100;
+  const transformerStress = calculateTransformerLoadingPct(peakKva, profile.transformerLimitKva);
   const shiftedEnergyPct = (sum(chart.map((point) => point.flexibleLoadKw)) / Math.max(totalEnergy, 1)) * 100;
   const strategyBonus = input.strategy === "orchestrated" ? 12 : input.strategy === "tou" ? 6 : 0;
   const batteryBonus = input.batteryMode === "none" ? 0 : input.batteryMode === "small" ? 4 : 7;
-  const stressPenalty = transformerStress > 90 ? 8 : transformerStress > 75 ? 4 : 0;
+  const stressPenalty = transformerStress > 100 ? 12 : transformerStress > 90 ? 8 : transformerStress > 75 ? 4 : 0;
+  const overloadHours = chart.filter((point) => point.overloaded).length;
+  const engineeringConfidence = buildEngineeringConfidence(input, transformerStress, overloadHours);
 
   return {
     peakKw: round(peakKw),
+    peakKva: round(peakKva),
     baselinePeakKw: round(baselinePeakKw),
+    baselinePeakKva: round(baselinePeakKva),
     peakReductionPct: round(Math.max(0, ((baselinePeakKw - peakKw) / Math.max(baselinePeakKw, 1)) * 100), 0),
+    peakEventReductionKw: round(Math.max(0, baselinePeakKw - peakKw)),
     dailyEnergyKwh: round(totalEnergy),
     baselineDailyEnergyKwh: round(baselineEnergy),
     monthlyCostTl: Math.round(monthlyCost),
@@ -338,10 +450,24 @@ function buildMetrics(input: FlexgridScenarioInput, chart: FlexgridScenarioPoint
     monthlySavingsTl: Math.max(0, Math.round(baselineMonthlyCost - monthlyCost)),
     carbonKgDaily: round(carbonKgDaily),
     carbonReductionPct: round(Math.max(0, ((baselineCarbonKgDaily - carbonKgDaily) / Math.max(baselineCarbonKgDaily, 1)) * 100), 0),
-    readinessScore: Math.min(98, Math.max(25, Math.round(profile.demandResponseFit + input.evCount * 1.3 + strategyBonus + batteryBonus - stressPenalty))),
+    readinessScore: Math.min(
+      98,
+      Math.max(25, Math.round(profile.demandResponseFit + input.evCount * 1.3 + strategyBonus + batteryBonus - stressPenalty))
+    ),
+    engineeringConfidence,
     transformerStress: Math.round(transformerStress),
+    transformerLimitKva: profile.transformerLimitKva,
+    maxCurrentA: Math.max(...chart.map((point) => point.estimatedCurrentA)),
+    nominalVoltageV: profile.nominalVoltageV,
+    powerFactor: profile.powerFactor,
+    overloadHours,
     shiftedEnergyPct: Math.round(shiftedEnergyPct),
     batteryDischargeKwh: round(batteryDischargeKwh),
+    batteryChargeKwh: round(batteryChargeKwh),
+    batteryEfficiencyLossKwh: round(batteryEfficiencyLossKwh, 2),
+    batterySocMinPct: battery.capacityKwh > 0 ? Math.min(...chart.map((point) => point.batterySocPct)) : 0,
+    batterySocFinalPct: battery.capacityKwh > 0 ? chart.at(-1)?.batterySocPct ?? 0 : 0,
+    batteryRoundTripEfficiencyPct: battery.capacityKwh > 0 ? Math.round(BATTERY_CHARGE_EFFICIENCY * BATTERY_DISCHARGE_EFFICIENCY * 100) : 0,
     evEnergyKwh: round(evEnergyKwh)
   };
 }
@@ -385,7 +511,13 @@ function buildAssets(chart: FlexgridScenarioPoint[]): FlexgridAssetContribution[
 function buildRecommendations(metrics: FlexgridScenarioMetrics, input: FlexgridScenarioInput): FlexgridRecommendation[] {
   const recommendations: FlexgridRecommendation[] = [];
 
-  if (metrics.transformerStress >= 85) {
+  if (metrics.overloadHours > 0) {
+    recommendations.push({
+      priority: "high",
+      title: "Resolve transformer overload before scaling",
+      detail: `${metrics.overloadHours} simulated hour(s) exceed the kVA limit. Reduce coincident EV charging or increase storage support before adding more load.`
+    });
+  } else if (metrics.transformerStress >= 85) {
     recommendations.push({
       priority: "high",
       title: "Protect the local transformer first",
@@ -437,15 +569,17 @@ function buildComparison(input: FlexgridScenarioInput): FlexgridComparison[] {
       strategy: option.id,
       label: option.label,
       peakKw: metrics.peakKw,
+      peakKva: metrics.peakKva,
       monthlyCostTl: metrics.monthlyCostTl,
       monthlySavingsTl: metrics.monthlySavingsTl,
-      readinessScore: metrics.readinessScore
+      readinessScore: metrics.readinessScore,
+      engineeringConfidence: metrics.engineeringConfidence
     };
   });
 }
 
 function buildSummary(site: FlexgridSiteProfile, metrics: FlexgridScenarioMetrics) {
-  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% and save about ${metrics.monthlySavingsTl.toLocaleString("tr-TR")} TL/month under this scenario.`;
+  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("tr-TR")} kW) and save about ${metrics.monthlySavingsTl.toLocaleString("tr-TR")} TL/month under this scenario.`;
 }
 
 export function isFlexgridSiteType(value: string | null): value is FlexgridSiteType {
@@ -487,7 +621,7 @@ export function buildFlexgridScenario(
   evCount?: number,
   tariffPlan: FlexgridTariffPlan = defaultFlexgridScenario.tariffPlan
 ): FlexgridScenario {
-  const input =
+  const input: FlexgridScenarioInput =
     typeof inputOrSiteType === "string"
       ? {
           siteType: inputOrSiteType,

@@ -1,35 +1,35 @@
 export const flexgridCopy = {
   brand: {
     name: "FlexGrid-TR",
-    label: "Open-source energy flexibility MVP",
-    title: "Energy flexibility cockpit for EV charging, flexible building loads, and demand-response analysis.",
+    label: "Hybrid-ready energy flexibility cockpit",
+    title: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation.",
     description:
       "FlexGrid-TR is a portfolio-grade engineering demonstrator for Turkish buildings and small facilities."
   },
   phases: [
     {
       week: "Phase 1",
-      title: "Software simulator",
+      title: "Simulation engine",
       description:
-        "A complete software-first model with facility profiles, EV demand, tariff plans, storage support, and exportable scenario data."
+        "Facility profiles, EV demand, tariff plans, battery SoC, kVA loading, current estimates, and exportable scenario data."
     },
     {
       week: "Phase 2",
-      title: "Decision layer",
+      title: "Decision cockpit",
       description:
-        "Peak reduction, monthly savings, carbon impact, transformer stress, and strategy recommendations in one cockpit."
+        "Peak reduction, monthly savings, carbon impact, transformer stress, engineering confidence, and strategy recommendations."
     },
     {
       week: "Phase 3",
-      title: "Public package",
+      title: "Telemetry validation",
       description:
-        "GitHub-ready README, architecture notes, roadmap, MIT license, and CI workflow for first public release."
+        "Mock or measured samples are compared against the simulated profile through a stateless POST API."
     },
     {
       week: "Phase 4",
-      title: "Hardware extension",
+      title: "Public package",
       description:
-        "A clean path toward ESP32, smart-plug telemetry, MQTT or HTTP ingestion, and measured vs simulated comparison."
+        "README, architecture, telemetry, validation notes, API examples, MIT license, tests, and CI workflow."
     }
   ],
   stack: [
@@ -37,7 +37,9 @@ export const flexgridCopy = {
     "TypeScript",
     "Tailwind CSS",
     "Recharts",
+    "Vitest",
     "Scenario simulation engine",
+    "Telemetry comparison API",
     "CSV and JSON exports",
     "Optional ESP32 / MQTT / smart-plug telemetry"
   ]

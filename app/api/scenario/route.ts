@@ -2,42 +2,17 @@ import { NextResponse } from "next/server";
 import { buildCsv } from "@/src/lib/utils/csv";
 import {
   buildFlexgridScenario,
-  clampFlexgridEvCount,
-  defaultFlexgridScenario,
   flexgridBatteryOptions,
   flexgridSiteProfiles,
   flexgridStrategyOptions,
-  flexgridTariffOptions,
-  isFlexgridBatteryMode,
-  isFlexgridSiteType,
-  isFlexgridStrategy,
-  isFlexgridTariffPlan
+  flexgridTariffOptions
 } from "@/src/lib/energy/flexgrid";
-
-function getScenarioParams(url: URL) {
-  const siteTypeParam = url.searchParams.get("siteType");
-  const strategyParam = url.searchParams.get("strategy");
-  const batteryModeParam = url.searchParams.get("batteryMode");
-  const tariffPlanParam = url.searchParams.get("tariffPlan");
-  const evCountParam = Number(url.searchParams.get("evCount"));
-
-  return {
-    siteType: isFlexgridSiteType(siteTypeParam) ? siteTypeParam : defaultFlexgridScenario.siteType,
-    strategy: isFlexgridStrategy(strategyParam) ? strategyParam : defaultFlexgridScenario.strategy,
-    batteryMode: isFlexgridBatteryMode(batteryModeParam)
-      ? batteryModeParam
-      : defaultFlexgridScenario.batteryMode,
-    tariffPlan: isFlexgridTariffPlan(tariffPlanParam)
-      ? tariffPlanParam
-      : defaultFlexgridScenario.tariffPlan,
-    evCount: clampFlexgridEvCount(evCountParam)
-  };
-}
+import { parseScenarioSearchParams } from "@/src/lib/energy/scenario-state";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const format = url.searchParams.get("format");
-  const params = getScenarioParams(url);
+  const params = parseScenarioSearchParams(url.searchParams);
   const scenario = buildFlexgridScenario(params);
 
   if (format === "csv") {
@@ -61,33 +36,47 @@ export async function GET(request: Request) {
       ],
       ["evCount", params.evCount],
       ["peakKw", scenario.metrics.peakKw],
+      ["peakKva", scenario.metrics.peakKva],
       ["baselinePeakKw", scenario.metrics.baselinePeakKw],
+      ["baselinePeakKva", scenario.metrics.baselinePeakKva],
       ["peakReductionPct", scenario.metrics.peakReductionPct],
+      ["peakEventReductionKw", scenario.metrics.peakEventReductionKw],
       ["dailyEnergyKwh", scenario.metrics.dailyEnergyKwh],
       ["monthlyCostTl", scenario.metrics.monthlyCostTl],
       ["monthlySavingsTl", scenario.metrics.monthlySavingsTl],
       ["carbonKgDaily", scenario.metrics.carbonKgDaily],
       ["carbonReductionPct", scenario.metrics.carbonReductionPct],
       ["readinessScore", scenario.metrics.readinessScore],
+      ["engineeringConfidence", scenario.metrics.engineeringConfidence],
       ["transformerStress", scenario.metrics.transformerStress],
+      ["transformerLimitKva", scenario.metrics.transformerLimitKva],
+      ["maxCurrentA", scenario.metrics.maxCurrentA],
+      ["powerFactor", scenario.metrics.powerFactor],
+      ["overloadHours", scenario.metrics.overloadHours],
+      ["batterySocMinPct", scenario.metrics.batterySocMinPct],
+      ["batterySocFinalPct", scenario.metrics.batterySocFinalPct],
       ["summary", scenario.summary],
       [],
-      ["hour", "totalLoadKw", "baselineLoadKw", "buildingLoadKw", "thermalLoadKw", "evLoadKw", "batteryKw", "flexibleLoadKw", "tariffTlPerKwh", "carbonKg"],
+      ["hour", "totalLoadKw", "totalKva", "baselineLoadKw", "buildingLoadKw", "thermalLoadKw", "evLoadKw", "batteryKw", "batterySocPct", "estimatedCurrentA", "transformerLoadingPct", "flexibleLoadKw", "tariffTlPerKwh", "carbonKg"],
       ...scenario.chart.map((item) => [
         item.hour,
         item.totalLoadKw,
+        item.totalKva,
         item.baselineLoadKw,
         item.buildingLoadKw,
         item.thermalLoadKw,
         item.evLoadKw,
         item.batteryKw,
+        item.batterySocPct,
+        item.estimatedCurrentA,
+        item.transformerLoadingPct,
         item.flexibleLoadKw,
         item.tariffTlPerKwh,
         item.carbonKg
       ])
     ];
 
-    return new Response(buildCsv(["metric", "value", "extra_1", "extra_2", "extra_3", "extra_4", "extra_5", "extra_6", "extra_7", "extra_8"], rows), {
+    return new Response(buildCsv(["metric", "value", "extra_1", "extra_2", "extra_3", "extra_4", "extra_5", "extra_6", "extra_7", "extra_8", "extra_9", "extra_10", "extra_11", "extra_12"], rows), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="flexgrid-tr-${params.siteType}-${params.strategy}.csv"`

@@ -1,40 +1,43 @@
 # FlexGrid-TR Roadmap
 
-## v1 complete
+## Current release
 
-The first public release is a finished software MVP:
+The current release is complete as a hybrid-ready software project:
 
-- dashboard-first cockpit
+- interactive operator cockpit
 - reusable simulation engine
+- transformer kVA/current estimates
+- battery SoC and efficiency assumptions
+- local saved scenarios
+- shareable scenario URLs
+- mock telemetry overlay
+- `POST /api/telemetry`
 - JSON and CSV exports
-- strategy comparison
-- recommendations
-- architecture documentation
-- CI workflow
+- automated tests and CI
 
 ## v1.1 polish
 
-- Add a demo screenshot or GIF to the README
-- Add saved scenario presets
-- Add a short case-study section for one sample facility
-- Add richer Turkish/English copy variants if the project is used for local presentations
+- Add a README screenshot or short GIF
+- Add richer bilingual presentation copy
+- Add downloadable report text for one selected scenario
+- Add optional telemetry sample import from CSV
 
-## v2 hybrid prototype
+## v2 physical telemetry
 
-- Add ESP32 or smart-plug telemetry
-- Add HTTP or MQTT ingestion
-- Compare measured vs simulated profile
-- Store a small history of telemetry samples
-- Add alerting for transformer stress and peak tariff periods
+- Add ESP32 HTTP sample sender
+- Add MQTT bridge example
+- Store a small rolling telemetry history
+- Compare measured and simulated profiles over multiple days
+- Add alerting for transformer stress and critical tariff periods
 
-## v3 engineering depth
+## v3 optimization depth
 
 - EV session prioritization by departure time
-- Battery state-of-charge simulation
+- Battery state-of-charge optimization over multiple days
+- Scenario persistence with a lightweight database
 - ENVER-style monthly report export
 - Basic anomaly detection
-- Scenario persistence and shareable links
 
 ## CV line
 
-Built an open-source energy flexibility cockpit for Turkish buildings and small facilities, combining EV charging scenarios, flexible-load simulation, peak-reduction analytics, carbon impact estimates, and a path toward low-cost telemetry.
+Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, demand-response analytics, telemetry validation, API exports, and automated tests.

@@ -1,27 +1,32 @@
 # FlexGrid-TR
 
-Open-source energy flexibility cockpit for EV charging, flexible building loads, and demand-response analysis.
+Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, and demand-response validation.
 
-FlexGrid-TR is a portfolio-grade electrical and electronics engineering project. It models a small facility, simulates flexible load orchestration, compares control strategies, and exports the same scenario data used by the UI as JSON or CSV.
+FlexGrid-TR is an electrical and electronics engineering portfolio project. It models a small facility, simulates flexible load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
 
-## What is finished in v1
+## What is finished
 
 - Dashboard-first operator cockpit
 - Facility profiles for apartment blocks, workshops, cafes, and electronics labs
-- EV concurrency, tariff plan, control strategy, and storage scenario controls
-- Hourly load profile with uncontrolled baseline and transformer limit
-- Peak demand, savings, carbon impact, transformer stress, EV energy, and flexible load KPIs
-- Strategy comparison table for uncontrolled, tariff-aware, and orchestrated operation
-- Recommendation engine for next operational actions
-- CSV and JSON export route powered by the same simulation core
-- Architecture and roadmap docs
-- GitHub Actions CI for typecheck, lint, and build
+- EV concurrency, tariff plan, control strategy, storage, and scenario preset controls
+- URL-shareable scenarios and local saved scenarios
+- Hourly load profile with uncontrolled baseline, telemetry overlay, and transformer limit
+- kW, kVA, current, power factor, overload-hour, battery SoC, cost, carbon, and confidence KPIs
+- Strategy comparison for uncontrolled, tariff-aware, and orchestrated operation
+- JSON and CSV scenario export
+- `POST /api/telemetry` measured-vs-simulated comparison API
+- Vitest coverage for model, telemetry, CSV, and API behavior
+- GitHub Actions CI for test, typecheck, lint, and build
 
 ## Why this project matters
 
-Grid flexibility is becoming more important as EV charging, cooling demand, and distributed resources grow. Small facilities often do not have a practical way to understand how much flexible load they have, when the transformer is stressed, or which control strategy creates measurable value.
+EV charging, cooling demand, and small distributed resources make local grid flexibility more valuable. Many small facilities do not have a practical way to estimate transformer stress, flexible load potential, or whether a control strategy will create measurable value.
 
-FlexGrid-TR fills that gap as a compact engineering demonstrator. It is software-first, but designed to grow into a low-cost hybrid prototype with ESP32 or smart-plug telemetry.
+FlexGrid-TR demonstrates that workflow without requiring physical hardware. It stays software-first for easy GitHub review, but its telemetry contract can be replaced by ESP32, MQTT, or smart-plug data later.
+
+## Turkish summary
+
+FlexGrid-TR; elektrikli araç şarjı, esnek bina yükleri, trafo yüklenmesi ve talep tarafı yönetimi için geliştirilmiş hibrit-hazır bir enerji esnekliği kokpitidir. Fiziksel donanım gerektirmeden çalışır; ancak ileride ESP32 veya akıllı priz verisiyle ölçülen-simüle karşılaştırması yapılabilecek şekilde tasarlanmıştır.
 
 ## Tech stack
 
@@ -29,7 +34,9 @@ FlexGrid-TR fills that gap as a compact engineering demonstrator. It is software
 - TypeScript
 - Tailwind CSS
 - Recharts
+- Vitest
 - Scenario simulation engine
+- Stateless telemetry comparison API
 - CSV and JSON exports
 
 ## Quick start
@@ -44,49 +51,61 @@ Open `http://localhost:3000`.
 ## Quality commands
 
 ```bash
+pnpm test
 pnpm typecheck
 pnpm lint
 pnpm build
 pnpm check
 ```
 
-## Repository structure
+## API examples
 
-- `app/page.tsx` - public app entry
-- `app/api/scenario/route.ts` - scenario JSON and CSV export
-- `components/energy` - cockpit UI
-- `src/lib/energy/flexgrid.ts` - simulation engine
-- `docs/FLEXGRID_TR_ARCHITECTURE.md` - architecture notes
-- `docs/FLEXGRID_TR_ROADMAP.md` - project roadmap
-
-## API example
+Scenario JSON:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4
 ```
 
-CSV export:
+Scenario CSV:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4&format=csv
 ```
 
-## Next hardware phase
+Telemetry comparison:
 
-The current release is complete as a software MVP. The next phase is to add one real telemetry channel:
+```bash
+curl -X POST http://localhost:3000/api/telemetry \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "mock",
+    "scenario": {
+      "siteType": "workshop",
+      "strategy": "orchestrated",
+      "batteryMode": "small",
+      "tariffPlan": "tou",
+      "evCount": 4
+    }
+  }'
+```
 
-- ESP32 or API-enabled smart plug
-- HTTP or MQTT ingestion
-- Measured vs simulated load comparison
-- Event-based demand-response logs
+## Repository structure
+
+- `app/api/scenario/route.ts` - scenario JSON and CSV export
+- `app/api/telemetry/route.ts` - telemetry validation and comparison
+- `components/energy` - cockpit UI and dashboard panels
+- `src/lib/energy/flexgrid.ts` - simulation engine
+- `src/lib/energy/telemetry.ts` - measured-vs-simulated comparison core
+- `tests` - model, telemetry, CSV, and API tests
+- `docs` - architecture, telemetry, validation, API, and roadmap notes
 
 ## Suggested GitHub description
 
-Open-source energy flexibility cockpit for EV charging, flexible building loads, and demand-response analytics.
+Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, demand response, and telemetry validation.
 
 ## Suggested topics
 
-`nextjs`, `typescript`, `energy`, `smart-grid`, `demand-response`, `ev-charging`, `power-systems`, `recharts`
+`nextjs`, `typescript`, `energy`, `smart-grid`, `demand-response`, `ev-charging`, `power-systems`, `telemetry`, `recharts`
 
 ## License
 

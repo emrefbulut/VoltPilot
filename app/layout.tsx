@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     default: flexgridCopy.brand.name,
     template: `%s | ${flexgridCopy.brand.name}`
   },
-  description: "Open-source energy flexibility MVP for EV charging, flexible building loads, and demand-response analytics.",
+  description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation.",
   applicationName: flexgridCopy.brand.name,
   keywords: [
     "energy flexibility",
@@ -28,13 +28,15 @@ export const metadata: Metadata = {
     "smart charging",
     "EV charging",
     "building energy",
+    "telemetry validation",
+    "transformer loading",
     "power systems",
     "Turkey"
   ],
   category: "technology",
   openGraph: {
     title: flexgridCopy.brand.name,
-    description: "Open-source energy flexibility MVP for EV charging, flexible building loads, and demand-response analytics.",
+    description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation.",
     siteName: flexgridCopy.brand.name,
     locale: "en_US",
     type: "website"
@@ -42,12 +44,12 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: flexgridCopy.brand.name,
-    description: "Open-source energy flexibility MVP for EV charging, flexible building loads, and demand-response analytics."
+    description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation."
   }
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d1663",
+  themeColor: "#064e3b",
   colorScheme: "light"
 };
 

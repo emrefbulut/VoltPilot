@@ -3,25 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: 70 24% 96%;
-  --foreground: 24 10% 10%;
+  --background: 150 13% 97%;
+  --foreground: 216 24% 8%;
   --card: 0 0% 100%;
-  --card-foreground: 24 10% 10%;
+  --card-foreground: 216 24% 8%;
   --popover: 0 0% 100%;
-  --popover-foreground: 24 10% 10%;
-  --primary: 158 64% 34%;
+  --popover-foreground: 216 24% 8%;
+  --primary: 168 76% 30%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 48 24% 90%;
-  --secondary-foreground: 24 10% 12%;
-  --muted: 48 18% 92%;
-  --muted-foreground: 25 8% 38%;
-  --accent: 42 87% 55%;
-  --accent-foreground: 24 10% 12%;
+  --secondary: 216 18% 93%;
+  --secondary-foreground: 216 24% 10%;
+  --muted: 210 18% 94%;
+  --muted-foreground: 214 11% 40%;
+  --accent: 39 94% 52%;
+  --accent-foreground: 216 24% 9%;
   --destructive: 348 83% 47%;
   --destructive-foreground: 0 0% 100%;
-  --border: 30 10% 84%;
-  --input: 30 10% 84%;
-  --ring: 158 64% 34%;
+  --border: 215 16% 84%;
+  --input: 215 16% 84%;
+  --ring: 168 76% 30%;
   --radius: 0.5rem;
   --font-sans: "Manrope", "Segoe UI", sans-serif;
   --font-display: "Playfair Display", Georgia, serif;
@@ -40,10 +40,7 @@ html {
 body {
   min-height: 100vh;
   overflow-x: hidden;
-  background:
-    linear-gradient(rgba(39, 39, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(39, 39, 42, 0.04) 1px, transparent 1px),
-    #f7f8f4;
+  background: #f5f7f3;
   background-size: 28px 28px;
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
@@ -82,6 +79,69 @@ textarea {
   text-wrap: pretty;
 }
 
+.energy-grid {
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(20, 184, 166, 0.1), transparent 36%),
+    linear-gradient(315deg, rgba(245, 158, 11, 0.09), transparent 32%),
+    #f5f7f3;
+  background-size: 32px 32px, 32px 32px, auto, auto, auto;
+}
+
+.powerline {
+  background-image:
+    linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.35), transparent),
+    linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.24), transparent);
+  background-position: 0 0, 64px 100%;
+  background-repeat: no-repeat;
+  background-size: 260px 1px, 220px 1px;
+  animation: powerline-flow 8s linear infinite;
+}
+
+.meter-sweep {
+  animation: meter-sweep 5.5s ease-in-out infinite;
+}
+
+.surface-rise {
+  animation: surface-rise 0.55s ease-out both;
+}
+
+@keyframes powerline-flow {
+  0% {
+    background-position: -260px 0, 100% 100%;
+  }
+
+  100% {
+    background-position: 100% 0, -220px 100%;
+  }
+}
+
+@keyframes meter-sweep {
+  0%,
+  100% {
+    transform: translateX(-22%);
+    opacity: 0.28;
+  }
+
+  50% {
+    transform: translateX(72%);
+    opacity: 0.62;
+  }
+}
+
+@keyframes surface-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 ::selection {
   background: rgba(16, 185, 129, 0.2);
   color: #111827;
@@ -90,5 +150,13 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
