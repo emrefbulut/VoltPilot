@@ -1,78 +1,40 @@
-# FlexGrid-TR Yol Haritasi
+# FlexGrid-TR Roadmap
 
-FlexGrid-TR, elektrik-elektronik muhendisligi ogrencisi icin enerji esnekligi, akilli sarj ve talep tarafi katilimini tek urunde gosteren acik kaynak bir MVP olarak tasarlanir.
+## v1 complete
 
-## Net yollar
+The first public release is a finished software MVP:
 
-### 1. Donanimsiz MVP
+- dashboard-first cockpit
+- reusable simulation engine
+- JSON and CSV exports
+- strategy comparison
+- recommendations
+- architecture documentation
+- CI workflow
 
-- Baslangic icin en mantikli yol budur.
-- Simule tuketim profilleri, EV sarj senaryolari, pik azaltma mantigi ve dashboard birlikte calisir.
-- Amac: hizli sekilde GitHub'a konabilir, anlatilabilir ve buyutulebilir urun iskeleti cikarmak.
+## v1.1 polish
 
-### 2. Az butceli hibrit prototip
+- Add a demo screenshot or GIF to the README
+- Add saved scenario presets
+- Add a short case-study section for one sample facility
+- Add richer Turkish/English copy variants if the project is used for local presentations
 
-- Donanimsiz MVP cope atilmaz; ustune tek nokta gercek veri akisi eklenir.
-- ESP32, izole enerji olcum modulu veya API'li akilli priz kullanilabilir.
-- Amac: demonstrasyonda fiziksel katman da gostermek.
+## v2 hybrid prototype
 
-## MVP hedefleri
+- Add ESP32 or smart-plug telemetry
+- Add HTTP or MQTT ingestion
+- Compare measured vs simulated profile
+- Store a small history of telemetry samples
+- Add alerting for transformer stress and peak tariff periods
 
-- 24 saatlik yuk profili simule etmek
-- EV sarj stratejileri arasinda karsilastirma yapmak
-- Pik yuk, maliyet ve esnek yuk etkisini hesaplamak
-- Talep tarafi katilimi uygunluk skoru uretmek
-- README, demo videosu ve mimari anlatim ile CV degerini yuksek tutmak
+## v3 engineering depth
 
-## Onerilen repo duzeni
+- EV session prioritization by departure time
+- Battery state-of-charge simulation
+- ENVER-style monthly report export
+- Basic anomaly detection
+- Scenario persistence and shareable links
 
-- `app/page.tsx`
-- `components/energy`
-- `src/content/flexgrid-copy.ts`
-- `src/lib/energy/flexgrid.ts`
-- `app/api/scenario/route.ts`
-- `docs/FLEXGRID_TR_ROADMAP.md`
-- `docs/FLEXGRID_TR_ARCHITECTURE.md`
+## CV line
 
-## 4 haftalik teslim mantigi
-
-### Hafta 1
-
-- Veri modeli
-- Tesis profilleri
-- Yuk tipleri
-- Baslangic tasarimi
-
-### Hafta 2
-
-- Interaktif simulator
-- Grafikler
-- KPI hesaplari
-- Strateji karsilastirmalari
-
-### Hafta 3
-
-- README gelistirme
-- Mimari cizim
-- Demo senaryolari
-- Teknik aciklama
-
-### Hafta 4
-
-- Opsiyonel ESP32 veri katmani
-- MQTT veya HTTP ingestion
-- Alarm mantigi
-- Gercek veri ile simulator karsilastirmasi
-
-## Kisa CV cumlesi
-
-Built an open-source energy flexibility MVP for Turkish buildings and small facilities, combining simulated load forecasting, smart EV charging scenarios, peak reduction analytics, and an extensible path toward real telemetry with low-cost hardware.
-
-## GitHub push oncesi kontrol listesi
-
-- Landing ekranindan `/` rotasini ac
-- Farkli tesis tipleri ve EV sayilarini dene
-- CSV export'u indirip ciktinin grafiklerle tutarli oldugunu kontrol et
-- Mimari notlarini ve yol haritasini repo icinde gorunur tut
-- Demo videosunda once problemi, sonra simulator etkisini, en sonda hibrit yolunu anlat
-
+Built an open-source energy flexibility cockpit for Turkish buildings and small facilities, combining EV charging scenarios, flexible-load simulation, peak-reduction analytics, carbon impact estimates, and a path toward low-cost telemetry.
