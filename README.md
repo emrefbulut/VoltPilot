@@ -98,6 +98,8 @@ curl -X POST http://localhost:3000/api/telemetry \
 - `src/lib/energy/telemetry.ts` - measured-vs-simulated comparison core
 - `tests` - model, telemetry, CSV, and API tests
 - `docs` - architecture, telemetry, validation, API, and roadmap notes
+- `docs/PROJECT_BRIEF_TR.md` - Turkish presentation and CV brief
+- `docs/HARDWARE_EXTENSION.md` - ESP32/smart-plug extension path
 
 ## Suggested GitHub description
 
@@ -109,4 +111,4 @@ Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, de
 
 ## License
 
-MIT
+MIT. Copyright (c) 2026 Emre Bulut.

@@ -2,7 +2,8 @@
   "name": "flexgrid-tr",
   "version": "0.1.0",
   "private": true,
-  "description": "Open-source energy flexibility MVP for EV charging, flexible building loads, and demand-response analytics.",
+  "description": "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, demand response, and telemetry validation.",
+  "author": "Emre Bulut",
   "keywords": [
     "energy",
     "smart-grid",
