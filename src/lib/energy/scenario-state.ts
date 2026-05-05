@@ -27,8 +27,8 @@ export type FlexgridScenarioPreset = {
 export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   {
     id: "workshop-peak-shave",
-    label: "Workshop peak shave",
-    description: "Small industrial site with orchestrated EV and battery support.",
+    label: "Atölye pik kırpma",
+    description: "Orkestre EV ve batarya desteği olan küçük sanayi profili.",
     input: {
       siteType: "workshop",
       strategy: "orchestrated",
@@ -39,8 +39,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   },
   {
     id: "cafe-tou",
-    label: "Cafe TOU response",
-    description: "Commercial evening peak with tariff-aware shifting.",
+    label: "Kafe zaman bazlı yanıt",
+    description: "Akşam piki olan ticari profil ve tarife duyarlı yük kaydırma.",
     input: {
       siteType: "cafe",
       strategy: "tou",
@@ -51,8 +51,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   },
   {
     id: "lab-telemetry",
-    label: "Electronics lab telemetry",
-    description: "University lab profile prepared for measured vs simulated validation.",
+    label: "Elektronik lab telemetri",
+    description: "Ölçülen ve simüle edilen profil doğrulamasına hazırlanmış üniversite laboratuvarı.",
     input: {
       siteType: "lab",
       strategy: "orchestrated",
@@ -109,11 +109,11 @@ export function parseScenarioInput(value: unknown):
     typeof value.tariffPlan === "string" && isFlexgridTariffPlan(value.tariffPlan) ? value.tariffPlan : null;
   const evCount = typeof value.evCount === "number" ? value.evCount : Number(value.evCount);
 
-  if (!siteType) errors.push("scenario.siteType must be apartment, workshop, cafe, or lab");
-  if (!strategy) errors.push("scenario.strategy must be baseline, tou, or orchestrated");
-  if (!batteryMode) errors.push("scenario.batteryMode must be none, small, or medium");
-  if (!tariffPlan) errors.push("scenario.tariffPlan must be flat, tou, or critical");
-  if (!Number.isFinite(evCount) || evCount < 0 || evCount > 12) errors.push("scenario.evCount must be a number from 0 to 12");
+  if (!siteType) errors.push("scenario.siteType apartment, workshop, cafe veya lab olmalı");
+  if (!strategy) errors.push("scenario.strategy baseline, tou veya orchestrated olmalı");
+  if (!batteryMode) errors.push("scenario.batteryMode none, small veya medium olmalı");
+  if (!tariffPlan) errors.push("scenario.tariffPlan flat, tou veya critical olmalı");
+  if (!Number.isFinite(evCount) || evCount < 0 || evCount > 12) errors.push("scenario.evCount 0 ile 12 arasında sayı olmalı");
 
   if (errors.length > 0 || !siteType || !strategy || !batteryMode || !tariffPlan) {
     return { ok: false, errors };

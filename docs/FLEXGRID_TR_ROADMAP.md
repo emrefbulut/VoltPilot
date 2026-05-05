@@ -1,43 +1,47 @@
-# FlexGrid-TR Roadmap
+# FlexGrid-TR Yol Haritası
 
-## Current release
+## Mevcut sürüm
 
-The current release is complete as a hybrid-ready software project:
+Mevcut sürüm yazılım öncelikli, hibrit hazır bir proje olarak tamamlandı:
 
-- interactive operator cockpit
-- reusable simulation engine
-- transformer kVA/current estimates
-- battery SoC and efficiency assumptions
-- local saved scenarios
-- shareable scenario URLs
-- mock telemetry overlay
-- `POST /api/telemetry`
-- JSON and CSV exports
-- automated tests and CI
+- Türkçe interaktif operatör kokpiti
+- Yeniden kullanılabilir simülasyon motoru
+- Trafo kVA ve akım tahminleri
+- Batarya SoC ve çevrim verimi varsayımları
+- LocalStorage kayıtlı senaryolar
+- Paylaşılabilir senaryo URL'leri
+- Sanal telemetri overlay'i
+- `/api/grid-signal` sanal/resmi veri uyumlu şebeke sinyali
+- EPİAŞ, ENTSO-E, Electricity Maps ve Ember için sağlayıcı modeli
+- `/api/telemetry` ölçülen-simüle karşılaştırması
+- JSON ve CSV dışa aktarım
+- Otomatik testler ve CI
 
-## v1.1 polish
+## v1.1 yazılım kanıtı
 
-- Add a README screenshot or short GIF
-- Add richer bilingual presentation copy
-- Add downloadable report text for one selected scenario
-- Add optional telemetry sample import from CSV
+- README ekran görüntüsü veya kısa GIF eklemek
+- Seçili senaryo için indirilebilir mühendislik raporu metni üretmek
+- Telemetri örneklerini CSV'den içeri alma
+- `/api/grid-signal` sağlayıcı adaptörlerini canlı API anahtarlarıyla doldurmak
+- Grid sinyalini maliyet/karbon optimizasyonuna daha güçlü bağlamak
 
-## v2 physical telemetry
+## v2 canlı veri ve opsiyonel donanım
 
-- Add ESP32 HTTP sample sender
-- Add MQTT bridge example
-- Store a small rolling telemetry history
-- Compare measured and simulated profiles over multiple days
-- Add alerting for transformer stress and critical tariff periods
+- EPİAŞ canlı veri adaptörü
+- Electricity Maps karbon yoğunluğu adaptörü
+- ESP32 HTTP örnek gönderici
+- MQTT köprüsü örneği
+- Birkaç günlük ölçülen/simüle profil karşılaştırması
+- Trafo stresi ve kritik tarife saatleri için uyarı
 
-## v3 optimization depth
+## v3 optimizasyon derinliği
 
-- EV session prioritization by departure time
-- Battery state-of-charge optimization over multiple days
-- Scenario persistence with a lightweight database
-- ENVER-style monthly report export
-- Basic anomaly detection
+- Kalkış saatine göre EV oturum önceliklendirmesi
+- Batarya SoC optimizasyonunu çok güne yaymak
+- Hafif veritabanı ile senaryo ve telemetri geçmişi
+- Aylık mühendislik raporu dışa aktarımı
+- Basit anomali tespiti
 
-## CV line
+## CV cümlesi
 
-Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, demand-response analytics, telemetry validation, API exports, and automated tests.
+FlexGrid-TR adlı hibrit-hazır enerji esnekliği kokpitini geliştirdim; EV şarj senaryoları, trafo yüklenmesi, batarya SoC modellemesi, sanal şebeke sinyali, talep tarafı yönetimi, telemetri doğrulaması, API çıktıları ve otomatik testleri tek bir Next.js/TypeScript projesinde birleştirdim.

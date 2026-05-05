@@ -1,20 +1,23 @@
 # FlexGrid-TR Architecture
 
-FlexGrid-TR is a hybrid-ready software demonstrator. The current release does not require physical hardware, but the data boundaries are shaped so a real telemetry channel can replace the mock samples later.
+FlexGrid-TR is a hybrid-ready software demonstrator. The current release does not require physical hardware, but the data boundaries are shaped so public grid signals and real telemetry channels can replace the deterministic demo data later.
 
 ```mermaid
 flowchart LR
     A["Scenario inputs\nFacility, tariff, EV sessions, storage, strategy"] --> B["Simulation engine\nkW, kVA, current, SoC, cost, carbon"]
     B --> C["Operator cockpit\nSaved scenarios, charts, report"]
-    B --> D["Scenario API\nJSON and CSV"]
-    B --> E["Telemetry comparison\nMock or measured samples"]
-    E --> F["Telemetry API\nMAE, peak error, confidence"]
+    G["Virtual grid signal\nEPİAŞ, ENTSO-E, Electricity Maps, Ember adapters"] --> C
+    G --> D["Grid signal API\n24h load, price, carbon, risk"]
+    B --> E["Scenario API\nJSON and CSV"]
+    B --> F["Telemetry comparison\nMock or measured samples"]
+    F --> H["Telemetry API\nMAE, peak error, confidence"]
 ```
 
 ## Runtime layers
 
 - The UI owns interaction state: selected scenario, saved local scenarios, shareable URL parameters, and mock telemetry display.
 - The simulation engine owns engineering truth: load profile generation, battery behavior, transformer loading, cost, carbon, and confidence scoring.
+- The grid-signal module owns public-data readiness: deterministic demo data today, provider-compatible contracts for EPİAŞ, ENTSO-E, Electricity Maps, and Ember later.
 - The telemetry module owns measured-vs-simulated comparison and can be reused by the UI and API.
 - The API layer is stateless and deterministic, which keeps the project easy to run from GitHub.
 
@@ -44,6 +47,18 @@ This is the planned replacement point for:
 - MQTT bridge output
 - smart-plug export files
 - manually collected measurement data
+
+## Virtual grid boundary
+
+`GET /api/grid-signal` accepts `provider` and `date` query parameters. Without credentials, it returns deterministic 24-hour demo data for load, market price, renewable share, carbon intensity, and demand risk. External providers currently use the same schema with fallback data so the application stays reliable during portfolio review.
+
+Supported provider IDs:
+
+- `demo`
+- `epias`
+- `entsoe`
+- `electricity-maps`
+- `ember`
 
 ## Storage decision
 

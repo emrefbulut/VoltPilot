@@ -20,31 +20,31 @@ export const metadata: Metadata = {
     default: flexgridCopy.brand.name,
     template: `%s | ${flexgridCopy.brand.name}`
   },
-  description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation.",
+  description: flexgridCopy.brand.title,
   applicationName: flexgridCopy.brand.name,
   keywords: [
-    "energy flexibility",
-    "demand response",
-    "smart charging",
-    "EV charging",
-    "building energy",
-    "telemetry validation",
-    "transformer loading",
-    "power systems",
-    "Turkey"
+    "enerji esnekliği",
+    "talep yanıtı",
+    "akıllı şarj",
+    "EV şarjı",
+    "bina enerjisi",
+    "telemetri doğrulama",
+    "trafo yüklenmesi",
+    "güç sistemleri",
+    "Türkiye"
   ],
   category: "technology",
   openGraph: {
     title: flexgridCopy.brand.name,
-    description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation.",
+    description: flexgridCopy.brand.title,
     siteName: flexgridCopy.brand.name,
-    locale: "en_US",
+    locale: "tr_TR",
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
     title: flexgridCopy.brand.name,
-    description: "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, and telemetry validation."
+    description: flexgridCopy.brand.title
   }
 };
 
@@ -57,7 +57,7 @@ export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="tr" suppressHydrationWarning>
       <body className={`${manrope.variable} ${playfairDisplay.variable} font-sans antialiased`}>
         {children}
       </body>

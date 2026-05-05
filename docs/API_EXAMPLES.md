@@ -12,6 +12,20 @@ curl "http://localhost:3000/api/scenario?siteType=workshop&strategy=orchestrated
 curl "http://localhost:3000/api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4&format=csv"
 ```
 
+## Scenario JSON with virtual grid signal
+
+```bash
+curl "http://localhost:3000/api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4&gridProvider=epias&gridDate=2026-05-06"
+```
+
+## Virtual grid signal
+
+```bash
+curl "http://localhost:3000/api/grid-signal?provider=demo&date=2026-05-06"
+```
+
+Accepted providers: `demo`, `epias`, `entsoe`, `electricity-maps`, `ember`.
+
 ## Telemetry mock comparison
 
 ```bash

@@ -22,6 +22,7 @@ import {
   Download,
   FileJson,
   Gauge,
+  Globe2,
   Leaf,
   Link2,
   LineChart,
@@ -66,6 +67,14 @@ import {
   generateMockTelemetrySamples,
   type FlexgridTelemetryComparison
 } from "@/src/lib/energy/telemetry";
+import {
+  buildDemoGridSignal,
+  flexgridGridProviders,
+  isFlexgridGridDate,
+  isFlexgridGridProvider,
+  type FlexgridGridProvider,
+  type FlexgridGridSignal
+} from "@/src/lib/energy/grid-signal";
 
 type SelectorOption<T extends string> = {
   id: T;
@@ -82,14 +91,20 @@ const siteOptions: SelectorOption<FlexgridSiteType>[] = Object.entries(flexgridS
 const batteryOptions: SelectorOption<FlexgridBatteryMode>[] = flexgridBatteryOptions.map((option) => ({
   id: option.id,
   label: option.label,
-  description: option.capacityKwh > 0 ? `${option.capacityKwh} kWh / ${option.maxPowerKw} kW` : "Software only"
+  description: option.capacityKwh > 0 ? `${option.capacityKwh} kWh / ${option.maxPowerKw} kW` : "Sadece yazılım"
 }));
 
 const navItems = [
-  { href: "#cockpit", label: "Cockpit" },
-  { href: "#architecture", label: "Architecture" },
-  { href: "#roadmap", label: "Roadmap" }
+  { href: "#cockpit", label: "Kokpit" },
+  { href: "#architecture", label: "Mimari" },
+  { href: "#roadmap", label: "Yol haritası" }
 ];
+
+const gridProviderOptions: SelectorOption<FlexgridGridProvider>[] = flexgridGridProviders.map((provider) => ({
+  id: provider.id,
+  label: provider.label,
+  description: provider.requiresCredential ? "Canlı API için anahtar hazır" : "Anahtarsız demo"
+}));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -151,6 +166,34 @@ function formatNumber(value: number, suffix = "") {
 
 function formatPct(value: number) {
   return `${value.toLocaleString("tr-TR")}%`;
+}
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function gridStatusLabel(status: FlexgridGridSignal["status"]) {
+  if (status === "live") {
+    return "Canlı";
+  }
+
+  if (status === "fallback") {
+    return "Sanal yedek";
+  }
+
+  return "Sanal demo";
+}
+
+function demandRiskLabel(risk: FlexgridGridSignal["points"][number]["demandRisk"]) {
+  if (risk === "high") {
+    return "Yüksek";
+  }
+
+  if (risk === "medium") {
+    return "Orta";
+  }
+
+  return "Düşük";
 }
 
 function SegmentedSelector<T extends string>({
@@ -283,9 +326,273 @@ function StatusPill({
   );
 }
 
+function ChartLegend({ items }: { items: { label: string; color: string; dashed?: boolean }[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-2">
+          <span
+            className={item.dashed ? "h-px w-5 border-t border-dashed" : "h-2 w-2 rounded-full"}
+            style={item.dashed ? { borderColor: item.color } : { backgroundColor: item.color }}
+          />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+type EnergyTooltipPayload = {
+  color?: string;
+  dataKey?: string | number;
+  fill?: string;
+  name?: string;
+  stroke?: string;
+  value?: number | string | null;
+};
+
+function formatTooltipValue(value: EnergyTooltipPayload["value"], unit = "") {
+  if (typeof value === "number") {
+    return `${value.toLocaleString("tr-TR")}${unit ? ` ${unit}` : ""}`;
+  }
+
+  if (typeof value === "string") {
+    return `${value}${unit ? ` ${unit}` : ""}`;
+  }
+
+  return "-";
+}
+
+function EnergyTooltip({
+  active,
+  label,
+  payload,
+  units = {}
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: EnergyTooltipPayload[];
+  units?: Record<string, string>;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="min-w-44 rounded-lg border border-slate-200 bg-white/95 p-3 text-sm shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <div className="space-y-1.5">
+        {payload.map((item) => {
+          const key = String(item.dataKey ?? item.name ?? "");
+          const color = item.color ?? item.stroke ?? item.fill ?? "#0f172a";
+
+          return (
+            <div key={`${key}-${item.name}`} className="flex items-center justify-between gap-5">
+              <span className="inline-flex min-w-0 items-center gap-2 text-slate-600">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                <span className="truncate">{item.name ?? key}</span>
+              </span>
+              <span className="font-semibold text-slate-950">{formatTooltipValue(item.value, units[key])}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GridSignalPanel({
+  signal,
+  provider,
+  date,
+  apiHref,
+  onProvider,
+  onDate
+}: {
+  signal: FlexgridGridSignal;
+  provider: FlexgridGridProvider;
+  date: string;
+  apiHref: string;
+  onProvider: (value: FlexgridGridProvider) => void;
+  onDate: (value: string) => void;
+}) {
+  const riskClass = {
+    low: "border-teal-200 bg-teal-50 text-teal-950",
+    medium: "border-amber-200 bg-amber-50 text-amber-950",
+    high: "border-rose-200 bg-rose-50 text-rose-950"
+  };
+  const highestRisk = signal.points.some((point) => point.demandRisk === "high")
+    ? "high"
+    : signal.points.some((point) => point.demandRisk === "medium")
+      ? "medium"
+      : "low";
+  const riskyHours = signal.points.filter((point) => point.demandRisk !== "low").map((point) => point.hour);
+  const riskWindow = riskyHours.length > 0 ? `${riskyHours[0]} - ${riskyHours.at(-1)}` : "Yok";
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
+            <Globe2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Sanal şebeke sinyali
+          </div>
+          <h3 className="mt-3 text-2xl font-semibold text-slate-950">Fiziksel cihaz olmadan resmi veri uyumlu karar katmanı</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            EPİAŞ, ENTSO-E, Electricity Maps ve Ember için aynı veri sözleşmesi korunur. API anahtarı yoksa uygulama
+            deterministik Türkiye demo sinyaliyle çalışır; böylece CV/proje demosu hiç kırılmaz.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:w-[28rem]">
+          <label className="space-y-2 text-sm font-semibold text-slate-700">
+            Veri sağlayıcı
+            <select
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-teal-500"
+              value={provider}
+              onChange={(event) => {
+                const nextProvider = event.target.value;
+                if (isFlexgridGridProvider(nextProvider)) {
+                  startTransition(() => onProvider(nextProvider));
+                }
+              }}
+            >
+              {gridProviderOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-2 text-sm font-semibold text-slate-700">
+            Tarih
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-teal-500"
+              type="date"
+              value={date}
+              onChange={(event) => startTransition(() => onDate(event.target.value || todayIsoDate()))}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        {[
+          ["Durum", gridStatusLabel(signal.status)],
+          ["Pik ulusal yük", formatNumber(signal.summary.peakLoadMw, " MW")],
+          ["Ortalama fiyat", formatNumber(signal.summary.averagePriceTlMwh, " TL/MWh")],
+          ["Yenilenebilir pay", formatPct(signal.summary.renewableSharePct)],
+          ["Karbon yoğunluğu", formatNumber(signal.summary.carbonIntensityGco2Kwh, " gCO₂/kWh")],
+          ["Risk saati", `${signal.summary.highRiskHours} yüksek`]
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+            <p className="mt-2 text-lg font-semibold text-slate-950">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-h-[19rem] rounded-lg border border-slate-100 bg-slate-50 p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm font-semibold text-slate-950">24 saatlik yük, fiyat ve karbon sinyali</p>
+            <ChartLegend
+              items={[
+                { label: "Yük (MW)", color: "#0f766e" },
+                { label: "Fiyat (TL/MWh)", color: "#f59e0b" },
+                { label: "Karbon", color: "#64748b", dashed: true }
+              ]}
+            />
+          </div>
+          <div className="mt-4 h-[15rem]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={signal.points} margin={{ left: -18, right: 10, top: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gridLoad" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor="#0f766e" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#0f766e" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(100,116,139,0.22)" />
+                <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
+                <Tooltip content={<EnergyTooltip units={{ loadMw: "MW", marketPriceTlMwh: "TL/MWh", carbonIntensityGco2Kwh: "gCO₂/kWh" }} />} />
+                <Area
+                  type="monotone"
+                  dataKey="loadMw"
+                  stroke="#0f766e"
+                  strokeWidth={2}
+                  fill="url(#gridLoad)"
+                  name="Yük (MW)"
+                  isAnimationActive={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="marketPriceTlMwh"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Fiyat"
+                  isAnimationActive={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="carbonIntensityGco2Kwh"
+                  stroke="#64748b"
+                  strokeDasharray="5 5"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Karbon"
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className={`rounded-lg border p-4 ${riskClass[highestRisk]}`}>
+            <p className="text-sm font-semibold">Dağıtım önerisi</p>
+            <p className="mt-2 text-sm leading-6 opacity-75">{signal.summary.dispatchAdvice}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold">
+              <div className="rounded-lg bg-white/45 px-3 py-2">
+                <p className="uppercase opacity-55">Pik saat</p>
+                <p className="mt-1 text-sm opacity-90">{signal.summary.peakHour}</p>
+              </div>
+              <div className="rounded-lg bg-white/45 px-3 py-2">
+                <p className="uppercase opacity-55">Risk penceresi</p>
+                <p className="mt-1 text-sm opacity-90">{riskWindow}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs font-semibold uppercase opacity-60">Risk seviyesi: {demandRiskLabel(highestRisk)}</p>
+          </div>
+          <a
+            href={apiHref}
+            className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            <span>Şebeke sinyali JSON</span>
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-sm font-semibold text-slate-950">Entegrasyon notları</p>
+            <div className="mt-3 space-y-2">
+              {signal.integrationNotes.map((note) => (
+                <p key={note} className="text-sm leading-6 text-slate-600">
+                  {note}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
   const stress = Math.min(100, Math.max(0, scenario.metrics.transformerStress));
   const flexibleShare = Math.min(100, Math.max(0, scenario.metrics.shiftedEnergyPct));
+  const dispatchState = scenario.metrics.overloadHours > 0 ? "Müdahale gerekli" : scenario.metrics.transformerStress >= 85 ? "Pik izlenmeli" : "Dengeli dağıtım";
 
   return (
     <section className="relative overflow-hidden rounded-lg border border-slate-800 bg-[#081113] text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)]">
@@ -295,25 +602,37 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-teal-100">
             <RadioTower className="h-3.5 w-3.5" aria-hidden="true" />
-            Live simulation
+            Canlı simülasyon
           </div>
           <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.02] tracking-normal md:text-5xl">
-            FlexGrid-TR turns flexible load into a decision cockpit.
+            FlexGrid-TR esnek yükü karar kokpitine dönüştürür.
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/70">
-            EV charging, storage, tariff pressure, transformer loading, and carbon impact stay connected to one
-            reusable scenario engine.
+            EV şarjı, depolama, tarife baskısı, trafo yüklenmesi ve karbon etkisi tek bir yeniden kullanılabilir
+            senaryo motorunda birleşir.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <StatusPill icon={Gauge} label="Peak event" value={formatNumber(scenario.metrics.peakEventReductionKw, " kW cut")} />
-            <StatusPill icon={BatteryCharging} label="Storage" value={formatNumber(scenario.metrics.batteryDischargeKwh, " kWh/day")} />
-            <StatusPill icon={ShieldAlert} label="Stress" value={`${scenario.metrics.transformerStress}/100`} />
+            <StatusPill icon={Gauge} label="Pik olay" value={formatNumber(scenario.metrics.peakEventReductionKw, " kW düşüş")} />
+            <StatusPill icon={BatteryCharging} label="Depolama" value={formatNumber(scenario.metrics.batteryDischargeKwh, " kWh/gün")} />
+            <StatusPill icon={ShieldAlert} label="Trafo" value={`${scenario.metrics.transformerStress}/100`} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-white/70">
+            <span className="rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-teal-100">{dispatchState}</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1">
+              Güven {scenario.metrics.engineeringConfidence}/100
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1">
+              Paylaşılabilir senaryo
+            </span>
           </div>
         </div>
 
         <div className="relative min-h-[15rem] overflow-hidden rounded-lg border border-white/10 bg-white/[0.05] p-4">
-          <svg className="h-full min-h-[12rem] w-full" viewBox="0 0 270 220" role="img" aria-label="FlexGrid energy flow map">
+          <div className="absolute left-4 top-4 z-10 rounded-full border border-white/10 bg-[#081113]/80 px-3 py-1 text-xs font-semibold text-white/70">
+            Dağıtım rotası
+          </div>
+          <svg className="h-full min-h-[12rem] w-full" viewBox="0 0 270 220" role="img" aria-label="FlexGrid enerji akış haritası">
             <defs>
               <linearGradient id="flow" x1="0" x2="1" y1="0" y2="0">
                 <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.15" />
@@ -324,11 +643,11 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
             <path d="M36 116 C74 68 105 68 136 112 S201 158 236 84" fill="none" stroke="url(#flow)" strokeWidth="4" strokeLinecap="round" />
             <path d="M36 116 H92 L136 112 L184 156 H236" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="6 7" />
             {[
-              { x: 36, y: 116, label: "Grid" },
+              { x: 36, y: 116, label: "Şebeke" },
               { x: 92, y: 84, label: "EV" },
               { x: 136, y: 112, label: "EMS" },
               { x: 184, y: 156, label: "BESS" },
-              { x: 236, y: 84, label: "Load" }
+              { x: 236, y: 84, label: "Yük" }
             ].map((node) => (
               <g key={node.label}>
                 <circle cx={node.x} cy={node.y} r="15" fill="#081113" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
@@ -342,7 +661,7 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
           <div className="absolute bottom-4 left-4 right-4 grid gap-3">
             <div>
               <div className="flex items-center justify-between text-xs text-white/55">
-                <span>Transformer loading</span>
+                <span>Trafo yüklenmesi</span>
                 <span>{stress}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
@@ -351,7 +670,7 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
             </div>
             <div>
               <div className="flex items-center justify-between text-xs text-white/55">
-                <span>Flexible share</span>
+                <span>Esnek pay</span>
                 <span>{flexibleShare}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
@@ -373,17 +692,29 @@ function DecisionPanel({ scenario, exportHref, jsonHref }: { scenario: FlexgridS
           <Route className="h-4 w-4" aria-hidden="true" />
         </span>
         <div>
-          <p className="text-sm font-semibold text-slate-950">Decision summary</p>
-          <p className="text-xs font-medium uppercase text-slate-400">Current scenario</p>
+          <p className="text-sm font-semibold text-slate-950">Karar özeti</p>
+          <p className="text-xs font-medium uppercase text-slate-400">Mevcut senaryo</p>
         </div>
       </div>
       <p className="mt-4 text-sm leading-6 text-slate-600">{scenario.summary}</p>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        {[
+          ["Hazırlık", `${scenario.metrics.readinessScore}/100`],
+          ["Güven", `${scenario.metrics.engineeringConfidence}/100`],
+          ["Aşım", `${scenario.metrics.overloadHours} sa`]
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-3">
+            <p className="text-[11px] font-semibold uppercase text-slate-400">{label}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950">{value}</p>
+          </div>
+        ))}
+      </div>
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Button asChild className="justify-between">
           <a href={exportHref}>
             <span className="inline-flex items-center gap-2">
               <Download className="h-4 w-4" aria-hidden="true" />
-              Export CSV
+              CSV dışa aktar
             </span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </a>
@@ -417,12 +748,12 @@ function ScenarioLibrary({
     <section className="mt-5 space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-950">Scenario library</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Presets and browser-local saved scenarios.</p>
+          <p className="text-sm font-semibold text-slate-950">Senaryo kütüphanesi</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Hazır senaryolar ve tarayıcıda saklanan kayıtlar.</p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={onSaveScenario}>
           <Save className="h-4 w-4" aria-hidden="true" />
-          Save
+          Kaydet
         </Button>
       </div>
 
@@ -450,7 +781,7 @@ function ScenarioLibrary({
               </button>
               <button
                 type="button"
-                aria-label={`Delete ${item.label}`}
+                aria-label={`${item.label} sil`}
                 className="rounded-md p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                 onClick={() => onDeleteScenario(item.id)}
               >
@@ -461,7 +792,7 @@ function ScenarioLibrary({
         </div>
       ) : (
         <p className="border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">
-          Saved scenarios stay in localStorage. No database or account is required.
+          Kaydedilen senaryolar localStorage içinde kalır. Veritabanı veya hesap gerekmez.
         </p>
       )}
     </section>
@@ -502,13 +833,20 @@ function ControlPanel({
   onDeleteScenario: (id: string) => void;
 }) {
   const selectedStrategy = flexgridStrategyOptions.find((item) => item.id === strategy) ?? flexgridStrategyOptions[0]!;
+  const controlSignals = [
+    ["Hazırlık", `${scenario.metrics.readinessScore}/100`],
+    ["Güven", `${scenario.metrics.engineeringConfidence}/100`]
+  ];
 
   return (
-    <aside className="w-full min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] lg:sticky lg:top-[5.5rem] lg:h-fit">
+    <aside
+      id="scenario-controls"
+      className="order-2 w-full min-w-0 scroll-mt-24 rounded-lg border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] lg:sticky lg:top-[5.5rem] lg:order-1 lg:h-fit"
+    >
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-400">Scenario controls</p>
+            <p className="text-xs font-semibold uppercase text-slate-400">Senaryo kontrolleri</p>
             <p className="mt-1 text-xl font-semibold text-slate-950">{scenario.site.label}</p>
           </div>
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white text-teal-700 shadow-sm">
@@ -516,26 +854,34 @@ function ControlPanel({
           </span>
         </div>
         <p className="mt-3 text-sm leading-6 text-slate-600">{selectedStrategy.description}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {controlSignals.map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-slate-200 bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase text-slate-400">{label}</p>
+              <p className="mt-1 text-lg font-semibold leading-none text-slate-950">{value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5 space-y-5">
-        <SegmentedSelector label="Facility" value={siteType} options={siteOptions} columns="two" onChange={onSiteType} />
-        <SegmentedSelector label="Control" value={strategy} options={flexgridStrategyOptions} onChange={onStrategy} />
-        <SegmentedSelector label="Battery" value={batteryMode} options={batteryOptions} onChange={onBatteryMode} />
-        <SegmentedSelector label="Tariff" value={tariffPlan} options={flexgridTariffOptions} onChange={onTariffPlan} />
+        <SegmentedSelector label="Tesis" value={siteType} options={siteOptions} columns="two" onChange={onSiteType} />
+        <SegmentedSelector label="Kontrol" value={strategy} options={flexgridStrategyOptions} onChange={onStrategy} />
+        <SegmentedSelector label="Batarya" value={batteryMode} options={batteryOptions} onChange={onBatteryMode} />
+        <SegmentedSelector label="Tarife" value={tariffPlan} options={flexgridTariffOptions} onChange={onTariffPlan} />
 
         <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold">Concurrent EV sessions</p>
-              <p className="mt-1 text-sm text-white/55">Charging density increases coordination value.</p>
+              <p className="text-sm font-semibold">Eş zamanlı EV oturumu</p>
+              <p className="mt-1 text-sm text-white/55">Şarj yoğunluğu koordinasyon değerini artırır.</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-400 text-xl font-semibold text-slate-950">
               {evCount}
             </div>
           </div>
           <input
-            aria-label="Concurrent EV sessions"
+            aria-label="Eş zamanlı EV oturumu"
             className="mt-5 w-full accent-teal-400"
             type="range"
             min={0}
@@ -566,8 +912,8 @@ function StrategyTable({ scenario }: { scenario: FlexgridScenario }) {
     <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-950">Strategy comparison</p>
-          <p className="mt-1 text-sm text-slate-500">Same facility, same tariff, different control logic.</p>
+          <p className="text-sm font-semibold text-slate-950">Strateji karşılaştırması</p>
+          <p className="mt-1 text-sm text-slate-500">Aynı tesis, aynı tarife, farklı kontrol mantığı.</p>
         </div>
         <LineChart className="h-5 w-5 text-teal-700" aria-hidden="true" />
       </div>
@@ -589,19 +935,19 @@ function StrategyTable({ scenario }: { scenario: FlexgridScenario }) {
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <dt className="font-semibold uppercase text-slate-400">Peak</dt>
+                  <dt className="font-semibold uppercase text-slate-400">Pik</dt>
                   <dd className="mt-1 text-slate-700">{formatNumber(item.peakKw, " kW")}</dd>
                 </div>
                 <div>
-                  <dt className="font-semibold uppercase text-slate-400">Cost</dt>
+                  <dt className="font-semibold uppercase text-slate-400">Maliyet</dt>
                   <dd className="mt-1 text-slate-700">{formatTl(item.monthlyCostTl)}</dd>
                 </div>
                 <div>
-                  <dt className="font-semibold uppercase text-slate-400">Confidence</dt>
+                  <dt className="font-semibold uppercase text-slate-400">Güven</dt>
                   <dd className="mt-1 text-slate-700">{item.engineeringConfidence}/100</dd>
                 </div>
                 <div>
-                  <dt className="font-semibold uppercase text-slate-400">Readiness</dt>
+                  <dt className="font-semibold uppercase text-slate-400">Hazırlık</dt>
                   <dd className="mt-1 text-slate-700">{item.readinessScore}/100</dd>
                 </div>
               </dl>
@@ -613,11 +959,11 @@ function StrategyTable({ scenario }: { scenario: FlexgridScenario }) {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-slate-200 text-xs uppercase text-slate-400">
             <tr>
-              <th className="py-3 pr-4 font-semibold">Strategy</th>
-              <th className="py-3 pr-4 font-semibold">Peak</th>
-              <th className="py-3 pr-4 font-semibold">Monthly cost</th>
-              <th className="py-3 pr-4 font-semibold">Savings</th>
-              <th className="py-3 font-semibold">Confidence</th>
+              <th className="py-3 pr-4 font-semibold">Strateji</th>
+              <th className="py-3 pr-4 font-semibold">Pik</th>
+              <th className="py-3 pr-4 font-semibold">Aylık maliyet</th>
+              <th className="py-3 pr-4 font-semibold">Tasarruf</th>
+              <th className="py-3 font-semibold">Güven</th>
             </tr>
           </thead>
           <tbody>
@@ -652,7 +998,7 @@ function Recommendations({ scenario }: { scenario: FlexgridScenario }) {
     <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-teal-700" aria-hidden="true" />
-        <p className="text-sm font-semibold text-slate-950">Recommended next actions</p>
+        <p className="text-sm font-semibold text-slate-950">Önerilen sonraki aksiyonlar</p>
       </div>
       <div className="mt-4 space-y-4">
         {scenario.recommendations.map((item) => (
@@ -681,23 +1027,23 @@ function TelemetryValidation({ comparison }: { comparison: FlexgridTelemetryComp
       <section className={`rounded-lg border p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] ${statusClass}`}>
         <div className="flex items-center gap-2">
           <RadioTower className="h-5 w-5" aria-hidden="true" />
-          <p className="text-sm font-semibold">Telemetry validation</p>
+          <p className="text-sm font-semibold">Telemetri doğrulama</p>
         </div>
         <p className="mt-4 text-5xl font-semibold leading-none">{comparison.metrics.confidenceScore}/100</p>
         <p className="mt-4 max-w-2xl text-sm leading-6 opacity-75">
-          Mock sensor samples are compared with the simulated dispatch profile. A future ESP32 or smart-plug feed can
-          post measured samples to the same API contract.
+          Sanal sensör örnekleri simüle edilen dağıtım profiliyle karşılaştırılır. İleride ESP32 veya smart-plug akışı
+          aynı API sözleşmesine ölçülen örnek gönderebilir.
         </p>
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <p className="text-sm font-semibold text-slate-950">Measured vs simulated</p>
+        <p className="text-sm font-semibold text-slate-950">Ölçülen vs simüle edilen</p>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           {[
             ["MAE", formatNumber(comparison.metrics.maeKw, " kW")],
             ["MAPE", formatPct(comparison.metrics.mapePct)],
-            ["Peak error", formatNumber(comparison.metrics.peakErrorKw, " kW")],
-            ["Energy delta", formatNumber(comparison.metrics.energyDeltaKwh, " kWh")]
+            ["Pik hata", formatNumber(comparison.metrics.peakErrorKw, " kW")],
+            ["Enerji farkı", formatNumber(comparison.metrics.energyDeltaKwh, " kWh")]
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg bg-slate-50 p-3">
               <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
@@ -712,21 +1058,21 @@ function TelemetryValidation({ comparison }: { comparison: FlexgridTelemetryComp
 
 function EngineeringReport({ scenario }: { scenario: FlexgridScenario }) {
   const rows = [
-    ["Peak apparent power", formatNumber(scenario.metrics.peakKva, " kVA")],
-    ["Transformer limit", formatNumber(scenario.metrics.transformerLimitKva, " kVA")],
-    ["Maximum current", formatNumber(scenario.metrics.maxCurrentA, " A")],
-    ["Power factor", scenario.metrics.powerFactor.toFixed(2)],
-    ["Battery SoC min/final", `${scenario.metrics.batterySocMinPct}% / ${scenario.metrics.batterySocFinalPct}%`],
-    ["Overload hours", `${scenario.metrics.overloadHours} h`]
+    ["Pik görünür güç", formatNumber(scenario.metrics.peakKva, " kVA")],
+    ["Trafo sınırı", formatNumber(scenario.metrics.transformerLimitKva, " kVA")],
+    ["Maksimum akım", formatNumber(scenario.metrics.maxCurrentA, " A")],
+    ["Güç faktörü", scenario.metrics.powerFactor.toFixed(2)],
+    ["Batarya SoC min/final", `${scenario.metrics.batterySocMinPct}% / ${scenario.metrics.batterySocFinalPct}%`],
+    ["Aşım saatleri", `${scenario.metrics.overloadHours} sa`]
   ];
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-950">Engineering report summary</p>
+          <p className="text-sm font-semibold text-slate-950">Mühendislik raporu özeti</p>
           <p className="mt-1 text-sm text-slate-500">
-            Electrical quantities are estimated from the facility power factor and 400 V three-phase service assumptions.
+            Elektriksel büyüklükler tesis güç faktörü ve 400 V üç faz servis varsayımıyla tahmin edilir.
           </p>
         </div>
         <CircuitBoard className="h-5 w-5 text-teal-700" aria-hidden="true" />
@@ -749,6 +1095,8 @@ export function FlexgridSimulator() {
   const [batteryMode, setBatteryMode] = useState<FlexgridBatteryMode>(defaultFlexgridScenario.batteryMode);
   const [tariffPlan, setTariffPlan] = useState<FlexgridTariffPlan>(defaultFlexgridScenario.tariffPlan);
   const [evCount, setEvCount] = useState<number>(defaultFlexgridScenario.evCount);
+  const [gridProvider, setGridProvider] = useState<FlexgridGridProvider>("demo");
+  const [gridDate, setGridDate] = useState<string>(todayIsoDate());
   const [savedScenarios, setSavedScenarios] = useState<SavedFlexgridScenario[]>([]);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const liveInput = useMemo(
@@ -780,19 +1128,35 @@ export function FlexgridSimulator() {
       })),
     [scenario.chart, telemetryByHour]
   );
+  const gridSignal = useMemo(
+    () => buildDemoGridSignal({ provider: gridProvider, date: gridDate }),
+    [gridDate, gridProvider]
+  );
   const params = useMemo(
     () => createScenarioSearchParams(liveInput).toString(),
     [liveInput]
   );
+  const shareParams = useMemo(() => {
+    const nextParams = new URLSearchParams(params);
+
+    nextParams.set("gridProvider", gridProvider);
+    nextParams.set("gridDate", gridDate);
+
+    return nextParams.toString();
+  }, [gridDate, gridProvider, params]);
   const exportHref = `/api/scenario?${params}&format=csv`;
   const jsonHref = `/api/scenario?${params}`;
+  const gridHref = `/api/grid-signal?provider=${gridProvider}&date=${gridDate}`;
   const bestStrategy = useMemo(
     () => scenario.comparison.reduce((best, item) => (item.monthlySavingsTl > best.monthlySavingsTl ? item : best)),
     [scenario.comparison]
   );
 
   useEffect(() => {
-    const urlScenario = parseScenarioSearchParams(new URLSearchParams(window.location.search));
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlScenario = parseScenarioSearchParams(urlParams);
+    const providerParam = urlParams.get("gridProvider");
+    const dateParam = urlParams.get("gridDate");
     startTransition(() => {
       setSavedScenarios(readSavedScenarios());
       setSiteType(urlScenario.siteType);
@@ -800,13 +1164,19 @@ export function FlexgridSimulator() {
       setBatteryMode(urlScenario.batteryMode);
       setTariffPlan(urlScenario.tariffPlan);
       setEvCount(urlScenario.evCount);
+      if (isFlexgridGridProvider(providerParam)) {
+        setGridProvider(providerParam);
+      }
+      if (isFlexgridGridDate(dateParam)) {
+        setGridDate(dateParam);
+      }
     });
   }, []);
 
   useEffect(() => {
-    const nextUrl = `${window.location.pathname}?${params}`;
+    const nextUrl = `${window.location.pathname}?${shareParams}`;
     window.history.replaceState(null, "", nextUrl);
-  }, [params]);
+  }, [shareParams]);
 
   function applyScenario(input: FlexgridScenarioInput) {
     startTransition(() => {
@@ -854,22 +1224,29 @@ export function FlexgridSimulator() {
     <div id="cockpit" className="energy-grid min-h-screen text-slate-950">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081113]/95 px-4 py-3 text-white backdrop-blur md:px-6">
         <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-4">
-          <a href="#cockpit" className="flex items-center gap-3" aria-label="FlexGrid-TR cockpit">
+          <a href="#cockpit" className="flex items-center gap-3" aria-label="FlexGrid-TR kokpit">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-400 text-slate-950">
               <CircuitBoard className="h-5 w-5" aria-hidden="true" />
             </span>
             <span>
               <span className="block text-sm font-semibold leading-4">FlexGrid-TR</span>
-              <span className="block text-xs text-white/45">Hybrid-ready cockpit</span>
+              <span className="block text-xs text-white/45">Hibrit hazır kokpit</span>
             </span>
           </a>
-          <nav className="hidden items-center gap-5 text-sm font-medium text-white/65 md:flex" aria-label="Primary navigation">
+          <nav className="hidden items-center gap-5 text-sm font-medium text-white/65 md:flex" aria-label="Ana gezinme">
             {navItems.map((item) => (
               <a key={item.href} href={item.href} className="transition hover:text-white">
                 {item.label}
               </a>
             ))}
           </nav>
+          <a
+            href="#scenario-controls"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] text-white transition hover:bg-white/10 sm:hidden"
+            aria-label="Senaryo kontrollerini aç"
+          >
+            <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+          </a>
           <div className="hidden items-center gap-2 sm:flex">
             <Button asChild size="sm" className="bg-teal-400 text-slate-950 shadow-none hover:bg-teal-300">
               <a href={exportHref}>
@@ -891,7 +1268,7 @@ export function FlexgridSimulator() {
               onClick={copyShareUrl}
             >
               <Link2 className="h-4 w-4" aria-hidden="true" />
-              {copyState === "copied" ? "Copied" : copyState === "failed" ? "Failed" : "Share"}
+              {copyState === "copied" ? "Kopyalandı" : copyState === "failed" ? "Başarısız" : "Paylaş"}
             </Button>
           </div>
         </div>
@@ -916,16 +1293,16 @@ export function FlexgridSimulator() {
           onDeleteScenario={deleteSavedScenario}
         />
 
-        <div className="min-w-0 space-y-5">
+        <div className="order-1 min-w-0 space-y-5 lg:order-2">
           <section className="surface-rise grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
             <NetworkMap scenario={scenario} />
             <div className="space-y-5">
               <DecisionPanel scenario={scenario} exportHref={exportHref} jsonHref={jsonHref} />
               <MetricTile
                 icon={PlugZap}
-                label="Best simulated strategy"
+                label="En iyi simüle strateji"
                 value={bestStrategy.label}
-                helper={`${formatTl(bestStrategy.monthlySavingsTl)} monthly savings at ${bestStrategy.peakKw} kW peak`}
+                helper={`${formatTl(bestStrategy.monthlySavingsTl)} aylık tasarruf, ${bestStrategy.peakKw} kW pik`}
                 tone="dark"
               />
             </div>
@@ -934,43 +1311,61 @@ export function FlexgridSimulator() {
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricTile
               icon={Gauge}
-              label="Peak demand"
+              label="Pik talep"
               value={formatNumber(scenario.metrics.peakKw, " kW")}
-              helper={`Baseline ${formatNumber(scenario.metrics.baselinePeakKw, " kW")}`}
+              helper={`Baz durum ${formatNumber(scenario.metrics.baselinePeakKw, " kW")}`}
               tone={scenario.metrics.transformerStress > 85 ? "red" : "neutral"}
             />
             <MetricTile
               icon={TrendingDown}
-              label="Monthly savings"
+              label="Aylık tasarruf"
               value={formatTl(scenario.metrics.monthlySavingsTl)}
-              helper={`${formatPct(scenario.metrics.peakReductionPct)} peak reduction`}
+              helper={`${formatPct(scenario.metrics.peakReductionPct)} pik azaltımı`}
               tone="green"
             />
             <MetricTile
               icon={ShieldAlert}
-              label="Transformer stress"
+              label="Trafo stresi"
               value={`${scenario.metrics.transformerStress}/100`}
-              helper={`${scenario.site.transformerLimitKva} kVA local limit`}
+              helper={`${scenario.site.transformerLimitKva} kVA yerel sınır`}
               tone={scenario.metrics.transformerStress > 85 ? "red" : "amber"}
             />
             <MetricTile
               icon={Leaf}
-              label="Carbon impact"
+              label="Karbon etkisi"
               value={formatPct(scenario.metrics.carbonReductionPct)}
-              helper={`${formatNumber(scenario.metrics.carbonKgDaily, " kg")} daily emissions`}
+              helper={`${formatNumber(scenario.metrics.carbonKgDaily, " kg")} günlük emisyon`}
               tone="green"
             />
           </section>
 
+          <GridSignalPanel
+            signal={gridSignal}
+            provider={gridProvider}
+            date={gridDate}
+            apiHref={gridHref}
+            onProvider={setGridProvider}
+            onDate={setGridDate}
+          />
+
           <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-950">24-hour load profile</p>
+                <p className="text-sm font-semibold text-slate-950">24 saatlik yük profili</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Selected scenario against uncontrolled operation, mock telemetry, and transformer limit.
+                  Seçilen senaryo; kontrolsüz çalışma, sanal telemetri ve trafo sınırıyla birlikte gösterilir.
                 </p>
               </div>
-              <p className="text-sm font-semibold text-teal-700">Best simulated strategy: {bestStrategy.label}</p>
+              <div className="space-y-2 md:text-right">
+                <p className="text-sm font-semibold text-teal-700">En iyi simüle strateji: {bestStrategy.label}</p>
+                <ChartLegend
+                  items={[
+                    { label: "Seçilen", color: "#0f766e" },
+                    { label: "Sanal telemetri", color: "#f59e0b" },
+                    { label: "Kontrolsüz", color: "#64748b", dashed: true }
+                  ]}
+                />
+              </div>
             </div>
             <div className="mt-5 h-[22rem]">
               <ResponsiveContainer width="100%" height="100%">
@@ -985,11 +1380,15 @@ export function FlexgridSimulator() {
                   <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
                   <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)"
-                    }}
+                    content={
+                      <EnergyTooltip
+                        units={{
+                          totalLoadKw: "kW",
+                          baselineLoadKw: "kW",
+                          measuredKw: "kW"
+                        }}
+                      />
+                    }
                   />
                   <ReferenceLine y={scenario.site.transformerLimitKw} stroke="#e11d48" strokeDasharray="5 5" />
                   <Area
@@ -998,7 +1397,8 @@ export function FlexgridSimulator() {
                     stroke="#0f766e"
                     strokeWidth={2.5}
                     fill="url(#selectedLoad)"
-                    name="Selected load"
+                    name="Seçilen yük"
+                    isAnimationActive={false}
                   />
                   <Line
                     type="monotone"
@@ -1007,7 +1407,8 @@ export function FlexgridSimulator() {
                     strokeDasharray="5 5"
                     strokeWidth={2}
                     dot={false}
-                    name="Uncontrolled"
+                    name="Kontrolsüz"
+                    isAnimationActive={false}
                   />
                   <Line
                     type="monotone"
@@ -1015,7 +1416,8 @@ export function FlexgridSimulator() {
                     stroke="#f59e0b"
                     strokeWidth={2}
                     dot={false}
-                    name="Mock telemetry"
+                    name="Sanal telemetri"
+                    isAnimationActive={false}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1029,8 +1431,8 @@ export function FlexgridSimulator() {
             <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-950">Load composition at peak</p>
-                  <p className="mt-1 text-sm text-slate-500">Peak hour contribution by asset class.</p>
+                  <p className="text-sm font-semibold text-slate-950">Pik anda yük bileşimi</p>
+                  <p className="mt-1 text-sm text-slate-500">Pik saat katkısı, varlık sınıfına göre.</p>
                 </div>
                 <Zap className="h-5 w-5 text-amber-600" aria-hidden="true" />
               </div>
@@ -1040,23 +1442,17 @@ export function FlexgridSimulator() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(100,116,139,0.2)" />
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxShadow: "0 18px 50px rgba(15, 23, 42, 0.12)"
-                      }}
-                    />
-                    <Bar dataKey="valueKw" fill="#0f766e" radius={[6, 6, 0, 0]} name="kW" />
+                    <Tooltip content={<EnergyTooltip units={{ valueKw: "kW" }} />} />
+                    <Bar dataKey="valueKw" fill="#0f766e" radius={[6, 6, 0, 0]} name="kW" isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </section>
 
             <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-              <p className="text-sm font-semibold text-slate-950">Peak asset share</p>
+              <p className="text-sm font-semibold text-slate-950">Pik varlık payı</p>
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                The controllable part is where the project creates engineering value.
+                Kontrol edilebilir kısım projenin mühendislik değerini oluşturur.
               </p>
               <div className="mt-5 space-y-4">
                 {scenario.assets.map((asset) => (
@@ -1074,22 +1470,22 @@ export function FlexgridSimulator() {
           <section className="grid gap-3 md:grid-cols-3">
             <MetricTile
               icon={Zap}
-              label="Flexible load share"
+              label="Esnek yük payı"
               value={formatPct(scenario.metrics.shiftedEnergyPct)}
-              helper="Share that can be shifted or controlled"
+              helper="Kaydırılabilen veya kontrol edilebilen pay"
             />
             <MetricTile
               icon={BatteryCharging}
-              label="Battery discharge"
+              label="Batarya deşarjı"
               value={formatNumber(scenario.metrics.batteryDischargeKwh, " kWh")}
-              helper={`${formatNumber(scenario.metrics.batteryRoundTripEfficiencyPct, "%")} round-trip efficiency`}
+              helper={`${formatNumber(scenario.metrics.batteryRoundTripEfficiencyPct, "%")} çevrim verimi`}
               tone="amber"
             />
             <MetricTile
               icon={Activity}
-              label="EV energy"
+              label="EV enerjisi"
               value={formatNumber(scenario.metrics.evEnergyKwh, " kWh")}
-              helper="Daily charging energy represented in the model"
+              helper="Modelde temsil edilen günlük şarj enerjisi"
             />
           </section>
         </div>

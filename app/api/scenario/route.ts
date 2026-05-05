@@ -7,6 +7,7 @@ import {
   flexgridStrategyOptions,
   flexgridTariffOptions
 } from "@/src/lib/energy/flexgrid";
+import { buildDemoGridSignal } from "@/src/lib/energy/grid-signal";
 import { parseScenarioSearchParams } from "@/src/lib/energy/scenario-state";
 
 export async function GET(request: Request) {
@@ -14,6 +15,13 @@ export async function GET(request: Request) {
   const format = url.searchParams.get("format");
   const params = parseScenarioSearchParams(url.searchParams);
   const scenario = buildFlexgridScenario(params);
+  const includeGridSignal = url.searchParams.has("gridProvider") || url.searchParams.has("gridDate");
+  const gridSignal = includeGridSignal
+    ? buildDemoGridSignal({
+        provider: url.searchParams.get("gridProvider"),
+        date: url.searchParams.get("gridDate")
+      })
+    : null;
 
   if (format === "csv") {
     const rows: Array<Array<unknown>> = [
@@ -55,6 +63,17 @@ export async function GET(request: Request) {
       ["overloadHours", scenario.metrics.overloadHours],
       ["batterySocMinPct", scenario.metrics.batterySocMinPct],
       ["batterySocFinalPct", scenario.metrics.batterySocFinalPct],
+      ...(gridSignal
+        ? [
+            ["gridProvider", gridSignal.provider],
+            ["gridStatus", gridSignal.status],
+            ["gridDate", gridSignal.date],
+            ["gridPeakLoadMw", gridSignal.summary.peakLoadMw],
+            ["gridPeakHour", gridSignal.summary.peakHour],
+            ["gridAveragePriceTlMwh", gridSignal.summary.averagePriceTlMwh],
+            ["gridCarbonIntensityGco2Kwh", gridSignal.summary.carbonIntensityGco2Kwh]
+          ]
+        : []),
       ["summary", scenario.summary],
       [],
       ["hour", "totalLoadKw", "totalKva", "baselineLoadKw", "buildingLoadKw", "thermalLoadKw", "evLoadKw", "batteryKw", "batterySocPct", "estimatedCurrentA", "transformerLoadingPct", "flexibleLoadKw", "tariffTlPerKwh", "carbonKg"],
@@ -84,5 +103,5 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json(scenario);
+  return NextResponse.json(gridSignal ? { ...scenario, gridSignal } : scenario);
 }

@@ -2,7 +2,7 @@
   "name": "flexgrid-tr",
   "version": "0.1.0",
   "private": true,
-  "description": "Hybrid-ready energy flexibility cockpit for EV charging, transformer loading, demand response, and telemetry validation.",
+  "description": "Turkish energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.",
   "author": "Emre Bulut",
   "keywords": [
     "energy",

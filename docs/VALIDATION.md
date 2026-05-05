@@ -28,8 +28,10 @@ The test suite covers:
 - scenario engineering metrics
 - telemetry sample validation
 - measured-vs-simulated comparison
+- virtual grid signal generation
+- grid provider validation
 - CSV escaping
-- scenario and telemetry API routes
+- scenario, grid signal, and telemetry API routes
 
 ## Engineering assumptions
 
@@ -48,4 +50,5 @@ A release is considered healthy when:
 - ESLint has no errors
 - production build completes
 - `/api/scenario` returns JSON and CSV
+- `/api/grid-signal` returns 24 hourly points and rejects invalid providers
 - `/api/telemetry` returns 200 for valid payloads and 400 for invalid payloads
