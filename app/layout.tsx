@@ -23,22 +23,22 @@ export const metadata: Metadata = {
   description: flexgridCopy.brand.title,
   applicationName: flexgridCopy.brand.name,
   keywords: [
-    "enerji esnekliği",
-    "talep yanıtı",
-    "akıllı şarj",
-    "EV şarjı",
-    "bina enerjisi",
-    "telemetri doğrulama",
-    "trafo yüklenmesi",
-    "güç sistemleri",
-    "Türkiye"
+    "energy flexibility",
+    "demand response",
+    "smart charging",
+    "EV charging",
+    "building energy",
+    "telemetry validation",
+    "transformer loading",
+    "power systems",
+    "Turkey"
   ],
   category: "technology",
   openGraph: {
     title: flexgridCopy.brand.name,
     description: flexgridCopy.brand.title,
     siteName: flexgridCopy.brand.name,
-    locale: "tr_TR",
+    locale: "en_US",
     type: "website"
   },
   twitter: {
@@ -57,7 +57,7 @@ export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="tr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${playfairDisplay.variable} font-sans antialiased`}>
         {children}
       </body>

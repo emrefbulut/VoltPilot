@@ -1,40 +1,40 @@
-# FlexGrid-TR Proje Özeti
+# FlexGrid-TR Project Brief
 
-## Kısa tanım
+## Short Description
 
-FlexGrid-TR; elektrikli araç şarjı, esnek bina yükleri, batarya desteği, sanal şebeke sinyali ve trafo yüklenmesini birlikte analiz eden hibrit-hazır bir enerji esnekliği kokpitidir.
+FlexGrid-TR is a hybrid-ready energy flexibility cockpit that analyzes EV charging, flexible building loads, battery support, virtual grid signals, and transformer loading in one workflow.
 
-Proje fiziksel donanım olmadan çalışır. Buna rağmen EPİAŞ/ENTSO-E/Electricity Maps/Ember uyumlu sanal veri katmanı ve ölçülen-simüle karşılaştırması için `POST /api/telemetry` uç noktası içerir; ileride ESP32, MQTT köprüsü veya akıllı priz verisi aynı sözleşmeye bağlanabilir.
+The project runs without physical hardware. It still includes an EPİAŞ/ENTSO-E/Electricity Maps/Ember-ready virtual data layer and a `POST /api/telemetry` endpoint for measured-vs-simulated comparison. Future ESP32, MQTT bridge, or smart-plug data can be connected to the same contract.
 
 ## Problem
 
-Küçük işletmeler, laboratuvarlar ve apartman blokları genellikle şu sorulara hızlı cevap veremez:
+Small businesses, labs, and apartment blocks often cannot quickly answer:
 
-- Trafo hangi saatlerde zorlanıyor?
-- EV şarjı pik yükü ne kadar artırıyor?
-- Batarya veya yük kaydırma aylık maliyeti ne kadar azaltabilir?
-- Resmi/kurumsal veri sinyali hangi saatlerde şebeke riskini artırıyor?
-- Simülasyon gerçek ölçümle ne kadar uyumlu?
+- When is the transformer under stress?
+- How much does EV charging increase peak load?
+- How much can storage or load shifting reduce monthly cost?
+- Which official or institutional grid-data signal increases risk by hour?
+- How closely does the simulation match measured data?
 
-## Çözüm
+## Solution
 
-FlexGrid-TR bu soruları tek ekranda yanıtlar:
+FlexGrid-TR answers those questions in one cockpit:
 
-- 24 saatlik yük profili oluşturur.
-- Kontrolsüz, tarife duyarlı ve orkestre stratejileri karşılaştırır.
-- `kW`, `kVA`, tahmini akım, güç faktörü, batarya SoC ve overload saatlerini raporlar.
-- `/api/grid-signal` ile sanal veya resmi kaynaklara hazır şebeke sinyali üretir.
-- Mock veya ölçülen telemetry verisini simülasyonla karşılaştırır.
-- JSON ve CSV çıktısı üretir.
+- Builds a 24-hour load profile.
+- Compares uncontrolled, tariff-aware, and orchestrated strategies.
+- Reports `kW`, `kVA`, estimated current, power factor, battery SoC, and overload hours.
+- Produces virtual or official-data-ready grid signals through `/api/grid-signal`.
+- Compares mock or measured telemetry data against the simulation.
+- Exports JSON and CSV outputs.
 
-## CV cümlesi
+## CV Line
 
-FlexGrid-TR adlı hibrit-hazır enerji esnekliği kokpitini geliştirdim; EV şarj senaryoları, trafo yüklenmesi, batarya SoC modellemesi, sanal şebeke sinyali, talep tarafı yönetimi, telemetry doğrulaması, API çıktıları ve otomatik testleri tek bir Next.js/TypeScript projesinde birleştirdim.
+Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading, battery SoC modeling, virtual grid signals, demand-response analytics, telemetry validation, API exports, and automated tests in one Next.js/TypeScript project.
 
-## Sunumda vurgulanacak noktalar
+## Presentation Highlights
 
-- Elektrik-elektronik mühendisliğiyle doğrudan ilişkili metrikler kullanır: `kW`, `kVA`, akım, güç faktörü, trafo yüklenmesi.
-- Sadece görsel dashboard değildir; test edilmiş simülasyon çekirdeği ve API katmanı vardır.
-- Fiziksel donanım olmadan EPİAŞ/ENTSO-E/Electricity Maps/Ember uyumlu veri mimarisi gösterir.
-- Donanım almadan gösterilebilir, ama donanıma bağlanacak sınır önceden tasarlanmıştır.
-- GitHub üzerinde çalıştırılabilir, okunabilir ve geliştirilebilir bir portfolyo projesidir.
+- Uses electrical and electronics engineering metrics directly: `kW`, `kVA`, current, power factor, and transformer loading.
+- It is not only a visual dashboard; it has a tested simulation core and API layer.
+- Demonstrates an EPİAŞ/ENTSO-E/Electricity Maps/Ember-compatible data architecture without physical hardware.
+- Can be shown without buying hardware, while the future hardware boundary is already designed.
+- Works as a readable, runnable, and extendable GitHub portfolio project.

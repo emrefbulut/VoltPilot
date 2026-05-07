@@ -1,59 +1,70 @@
-# Sanal Şebeke Verisi Rehberi
+# Virtual Grid Data Guide
 
-Bu proje fiziksel donanım olmadan gerçek uygulama hissi vermek için “sanal ama resmi veri kaynaklarına hazır” bir yol izler.
+FlexGrid-TR follows a "virtual first, official-data-ready later" data strategy. This keeps the project runnable without hardware while preserving a credible path toward live institutional data.
 
-## Neden sanal başlıyoruz?
+## Why Start Virtually?
 
-Fiziksel ölçüm ilk aşamada maliyet, güvenlik, kalibrasyon ve saha erişimi ister. Portfolyo projesi için önce yazılım kanıtını tamamlamak daha doğru yoldur:
+Physical measurement introduces cost, safety, calibration, and site-access constraints. For a portfolio project, it is more useful to complete the software proof first:
 
-- Simülasyon motoru deterministik çalışır.
-- Testler internete veya API anahtarına bağlı kalmaz.
-- UI, API ve dokümantasyon gerçek veri sözleşmesine göre tasarlanır.
-- Donanım geldiğinde sadece veri adaptörü değiştirilir, ürün hikayesi değişmez.
+- The simulation engine stays deterministic.
+- Tests do not depend on the internet or API keys.
+- The UI, API, and documentation are shaped around a real data contract.
+- When hardware or live data arrives, only the adapter changes; the product story does not.
 
-## Sağlayıcı modeli
+## Provider Model
 
-`/api/grid-signal` endpoint'i şu sağlayıcıları kabul eder:
+`/api/grid-signal` accepts these provider IDs:
 
-- `demo`: Anahtarsız, deterministik 24 saatlik Türkiye şebeke sinyali.
-- `epias`: EPİAŞ Şeffaflık Platformu için resmi Türkiye veri uyum katmanı.
-- `entsoe`: ENTSO-E Transparency Platform için Avrupa veri uyum katmanı.
-- `electricity-maps`: Karbon yoğunluğu, elektrik karışımı, yük ve fiyat sinyali uyum katmanı.
-- `ember`: Aylık/yıllık ülke bazlı talep, üretim, emisyon ve karbon yoğunluğu uyum katmanı.
+- `demo`: Keyless deterministic 24-hour grid signal for Turkey.
+- `epias`: EPİAŞ Transparency Platform adapter target for official Turkish electricity data.
+- `entsoe`: ENTSO-E Transparency Platform adapter target for European power-system data.
+- `electricity-maps`: Adapter target for carbon intensity, electricity mix, load, and price signals.
+- `ember`: Adapter target for monthly and yearly country-level demand, generation, emissions, and carbon intensity data.
 
-Canlı kimlik bilgileri yoksa `epias`, `entsoe`, `electricity-maps` ve `ember` seçenekleri aynı şema ile sanal yedek veri döndürür. Bu bilinçli bir tasarımdır: demo her zaman çalışır, entegrasyon yolu açık kalır.
+If live credentials are missing, `epias`, `entsoe`, `electricity-maps`, and `ember` return virtual fallback data with the same schema. This is intentional: the demo always works and the integration path remains open.
 
-## API örneği
+## API Example
 
 ```text
 GET /api/grid-signal?provider=epias&date=2026-05-06
 ```
 
-Özet çıktı alanları:
+Main response fields:
 
-- `provider`: Seçilen sağlayıcı.
-- `status`: `demo`, `live` veya `fallback`.
-- `points`: 24 saatlik yük, fiyat, yenilenebilir pay, karbon yoğunluğu ve risk sinyali.
-- `summary`: Pik yük, pik saat, ortalama fiyat, ortalama karbon yoğunluğu ve dağıtım önerisi.
-- `integrationNotes`: Canlı entegrasyona geçiş notları.
+- `provider`: Selected provider.
+- `status`: `demo`, `live`, or `fallback`.
+- `points`: 24-hour load, price, renewable-share, carbon-intensity, and risk signal.
+- `summary`: Peak load, peak hour, average price, average carbon intensity, and dispatch advice.
+- `integrationNotes`: Notes for switching from fallback data to live data.
 
-## Resmi/kurumsal kaynaklar
+## Official and Institutional Sources
 
-- EPİAŞ Şeffaflık Platformu teknik dokümantasyonu, Türkiye elektrik verileri için REST servislerini ve servis başlıklarını listeler: https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html
-- ENTSO-E Transparency Platform, Avrupa elektrik piyasası ve sistem şeffaflık verileri için merkezi platformdur: https://transparency.entsoe.eu/
-- Electricity Maps API; karbon yoğunluğu, elektrik karışımı, yenilenebilir pay, yük ve fiyat sinyallerini kapsayan ticari/opsiyonel API sunar: https://portal.electricitymaps.com/docs/api
-- Ember API; açık elektrik verileri, talep, üretim, emisyon ve karbon yoğunluğu veri setleri için kullanılabilir: https://ember-energy.org/data/api/
+- EPİAŞ Transparency Platform technical documentation lists REST services for Turkish electricity data: https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html
+- ENTSO-E Transparency Platform is the central platform for European electricity market and system-transparency data: https://transparency.entsoe.eu/
+- Electricity Maps API provides optional commercial/API access for carbon intensity, electricity mix, renewable share, load, and price signals: https://portal.electricitymaps.com/docs/api
+- Ember API provides open electricity datasets for demand, generation, emissions, and carbon intensity: https://ember-energy.org/data/api/
 
-## Sınırlamalar
+## Refresh Frequency
 
-Bu veriler bina sayacı seviyesi ölçüm değildir. Ulusal, bölgesel veya piyasa seviyesi sinyal sağlar. FlexGrid-TR bu sinyali bina/tesis simülasyonuna bağlayarak şu soruya cevap verir:
+The current application does not poll live external APIs. `demo` data is generated deterministically for the requested date and therefore has no external refresh cycle.
 
-“Bugün donanım yokken hangi saatler riskli, hangi kontrol stratejisi daha güvenli, hangi senaryo ileride ölçümle doğrulanmaya değer?”
+Live adapter refresh should be configured per provider and per dataset:
 
-## Donanıma geçiş yolu
+- `epias`: EPİAŞ is the primary Turkish official-data target. Its published datasets are tied to market and transparency processes, so the cadence is dataset-specific rather than one global interval.
+- `entsoe`: ENTSO-E Transparency Platform publishes many data items through REST API, file extracts, subscriptions, web services, and ECP. Resolution and publication timing depend on the selected data item.
+- `electricity-maps`: Electricity Maps API defaults to hourly temporal granularity and supports 5-minute, 15-minute, hourly, daily, monthly, quarterly, and yearly granularities where the endpoint supports them.
+- `ember`: Ember Monthly Electricity Data is updated twice per month, once in the first week and once in the third week.
 
-1. Sanal demo sinyaliyle UI, API ve testleri tamamla.
-2. EPİAŞ/ENTSO-E/Electricity Maps/Ember adaptörlerinden birini canlı veriyle doldur.
-3. Smart-plug veya ESP32 ölçümünü `/api/telemetry` sözleşmesine bağla.
-4. Ölçülen ve simüle edilen farkları MAE, pik hata, enerji farkı ve güven skoru ile takip et.
-5. Model varsayımlarını gerçek ölçüme göre kalibre et.
+## Limitations
+
+These data sources are not building-meter measurements. They provide national, regional, or market-level signals. FlexGrid-TR connects those signals to a facility simulation to answer:
+
+"Without hardware today, which hours are risky, which control strategy is safer, and which scenario is worth validating with future measurements?"
+
+## Hardware Path
+
+1. Complete UI, API, and tests with the virtual demo signal.
+2. Fill one of the EPİAŞ, ENTSO-E, Electricity Maps, or Ember adapters with live data.
+3. Connect smart-plug or ESP32 measurements to the `/api/telemetry` contract.
+4. Track measured-vs-simulated difference through MAE, peak error, energy delta, and confidence score.
+5. Calibrate model assumptions against real measurements.

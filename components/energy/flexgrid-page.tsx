@@ -4,23 +4,23 @@ import { FlexgridSimulator } from "@/components/energy/flexgrid-simulator";
 
 const architectureSteps = [
   {
-    title: "Senaryo girdileri",
-    description: "Tesis tipi, tarife, EV yoğunluğu, depolama ve kontrol stratejisi modele girer.",
+    title: "Scenario inputs",
+    description: "Facility type, tariff, EV density, storage, and control strategy enter the model.",
     icon: PlugZap
   },
   {
-    title: "Simülasyon çekirdeği",
-    description: "Saatlik kW, kVA, akım, batarya SoC, maliyet, karbon ve güven skoru birlikte hesaplanır.",
+    title: "Simulation core",
+    description: "Hourly kW, kVA, current, battery SoC, cost, carbon, and confidence are calculated together.",
     icon: Cpu
   },
   {
-    title: "Telemetri doğrulama",
-    description: "Sanal veya ölçülen örnekler simüle edilen dağıtım profiliyle karşılaştırılır.",
+    title: "Telemetry validation",
+    description: "Mock or measured samples are compared with the simulated dispatch profile.",
     icon: Layers3
   },
   {
-    title: "Dışa aktarım katmanı",
-    description: "JSON, CSV, grid signal ve POST telemetri API'leri aynı test edilmiş modeli kullanır.",
+    title: "Export layer",
+    description: "JSON, CSV, grid signal, and POST telemetry APIs use the same tested model.",
     icon: Database
   }
 ];
@@ -35,14 +35,14 @@ export function FlexgridPage() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-teal-100">
               <GitBranch className="h-3.5 w-3.5" aria-hidden="true" />
-              Mimari
+              Architecture
             </div>
             <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-normal md:text-5xl">
-              Tek simülasyon çekirdeği UI, API katmanları, telemetri karşılaştırması ve CSV raporunu besler.
+              One simulation core powers the UI, APIs, telemetry comparison, and CSV report.
             </h2>
             <p className="mt-5 text-base leading-7 text-white/65">
-              Uygulama kolay çalışır kalır, ama gerçek bir mühendislik sınırı vardır: senaryo girdileri yeniden
-              kullanılabilir modele akar; kokpit, dışa aktarımlar, testler ve telemetri API katmanı aynı çıktıyı tüketir.
+              The application stays easy to run, but it has a real engineering boundary: scenario inputs flow into a
+              reusable model, then the cockpit, exports, tests, and telemetry API consume the same output.
             </p>
           </div>
 
@@ -71,14 +71,14 @@ export function FlexgridPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-teal-800 shadow-sm">
               <RadioTower className="h-3.5 w-3.5" aria-hidden="true" />
-              Yol haritası
+              Roadmap
             </div>
             <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-normal text-slate-950 md:text-5xl">
-              Şimdi sanal ve hibrit hazır, fiziksel donanım yolu sonra.
+              Virtual and hybrid-ready now, with a physical hardware path later.
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Mevcut sürüm yazılım öncelikli hibrit prototip olarak çalışır. Sonraki faz, ürün hikayesini bozmadan
-              mock örnekleri ESP32 veya smart-plug telemetrisiyle değiştirebilir.
+              The current release works as a software-first hybrid prototype. The next phase can replace mock samples
+              with ESP32 or smart-plug telemetry without changing the product story.
             </p>
           </div>
 
@@ -88,7 +88,7 @@ export function FlexgridPage() {
               <article key={phase.week} className="relative grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)] md:grid-cols-[8rem_minmax(0,1fr)]">
                 <div className="flex items-center gap-3">
                   <span className="relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-sm font-semibold text-white">
-                    {phase.week.replace("Faz ", "F")}
+                    {phase.week.replace("Phase ", "P")}
                   </span>
                   <p className="text-sm font-semibold text-teal-700 md:hidden">{phase.week}</p>
                 </div>
@@ -108,15 +108,14 @@ export function FlexgridPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
               <Activity className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
-              Repo değeri
+              Repository value
             </div>
             <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-normal text-slate-950 md:text-5xl">
-              Okunmak, çalıştırılmak ve genişletilmek için tasarlandı.
+              Built to be read, run, and extended.
             </h2>
             <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-              FlexGrid-TR yalnızca görsel demo değil. Yeniden kullanılabilir senaryo motoru, sanal şebeke sinyali,
-              telemetri karşılaştırma API katmanı, otomatik testleri, açık dokümantasyonu ve düşük maliyetli donanıma
-              inandırıcı geçiş yolu var.
+              FlexGrid-TR is not only a visual demo. It has a reusable scenario engine, virtual grid signals, a telemetry
+              comparison API, automated tests, public documentation, and a credible path toward low-cost hardware.
             </p>
           </div>
 

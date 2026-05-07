@@ -1,65 +1,76 @@
 # FlexGrid-TR
 
-EV şarjı, esnek bina yükleri, trafo yüklenmesi, sanal şebeke sinyali ve telemetri doğrulaması için hibrit hazır enerji esnekliği kokpiti.
+Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, and telemetry validation.
 
-FlexGrid-TR, elektrik-elektronik mühendisliği portfolyosu için geliştirilmiş yazılım öncelikli bir mühendislik projesidir. Fiziksel donanım gerektirmeden küçük tesis senaryolarını modeller, esnek yük orkestrasyonunu simüle eder, trafo yüklenmesini tahmin eder, stratejileri karşılaştırır ve sanal/ölçülen telemetri örneklerini simülasyonla doğrular.
+FlexGrid-TR is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
 
-## Neden önemli?
+## Why It Matters
 
-EV şarjı, iklimlendirme yükleri ve küçük ölçekli depolama sistemleri yerel şebeke esnekliğini daha değerli hale getiriyor. Küçük tesislerin çoğunda trafo stresini, esnek yük potansiyelini ve kontrol stratejisinin ekonomik etkisini hızlıca görebilecek pratik bir araç yok.
+EV charging, cooling demand, and small distributed resources make local grid flexibility more valuable. Many small facilities do not have a practical way to estimate transformer stress, flexible-load potential, or whether a control strategy will create measurable value.
 
-FlexGrid-TR bu boşluğu yazılım tabanlı olarak gösterir. Bugün donanım almadan çalışır; ileride ESP32, MQTT veya smart-plug verisi geldiğinde aynı API sözleşmesiyle ölçülen-simüle karşılaştırmasına geçebilir.
+FlexGrid-TR demonstrates that workflow in software first. It works today without hardware, but its telemetry and public-data contracts can later be connected to ESP32, MQTT, smart-plug data, or live grid-data providers.
 
-## Tamamlanan özellikler
+## Completed Features
 
-- Türkçe dashboard ve operatör kokpiti
-- Apartman, KOBİ atölyesi, kafe/restoran ve elektronik laboratuvarı tesis profilleri
-- EV eş zamanlılığı, tarife planı, kontrol stratejisi, batarya ve hazır senaryo kontrolleri
-- URL ile paylaşılabilir senaryolar ve localStorage içinde kayıtlı senaryolar
-- Kontrolsüz baz durum, sanal telemetri ve trafo sınırıyla 24 saatlik yük grafiği
-- kW, kVA, akım, güç faktörü, aşım saati, batarya SoC, maliyet, karbon ve mühendislik güven KPI'ları
-- Kontrolsüz, tarife duyarlı ve orkestre strateji karşılaştırması
-- `/api/grid-signal` sanal şebeke sinyali API'si
-- EPİAŞ, ENTSO-E, Electricity Maps ve Ember için anahtar hazır/fallback veri mimarisi
-- `/api/scenario` JSON ve CSV dışa aktarım
-- `/api/telemetry` ölçülen-simüle karşılaştırma API'si
-- Vitest kapsamı: simülasyon motoru, telemetri, CSV, grid signal ve API davranışı
-- GitHub Actions CI: test, typecheck, lint ve build
+- English dashboard and operator cockpit
+- Facility profiles for apartment blocks, workshops, cafes, and electronics labs
+- EV concurrency, tariff plan, control strategy, storage, and scenario preset controls
+- URL-shareable scenarios and browser-local saved scenarios
+- 24-hour load profile with uncontrolled baseline, mock telemetry, and transformer limit
+- kW, kVA, current, power factor, overload-hour, battery SoC, cost, carbon, and engineering-confidence KPIs
+- Strategy comparison for uncontrolled, tariff-aware, and orchestrated operation
+- `/api/grid-signal` virtual grid signal API
+- EPİAŞ, ENTSO-E, Electricity Maps, and Ember adapter-ready provider model
+- `/api/scenario` JSON and CSV export
+- `/api/telemetry` measured-vs-simulated comparison API
+- Vitest coverage for the simulation engine, telemetry, CSV, grid signal, and API behavior
+- GitHub Actions CI for test, typecheck, lint, and build
 
-## Sanal veri yaklaşımı
+## Virtual Data Approach
 
-Fiziksel ölçüm için erken davranmak yerine proje önce “sanal ama gerçek kaynaklara hazır” çalışır:
+The project starts with virtual data instead of physical measurement hardware:
 
-- EPİAŞ Şeffaflık Platformu Türkiye için resmi piyasa, üretim, tüketim ve iletim veri uyum katmanı olarak modellenir.
-- ENTSO-E Avrupa şeffaflık verileri için alternatif adaptör olarak tutulur.
-- Electricity Maps karbon yoğunluğu, elektrik karışımı, yük ve fiyat sinyalleri için opsiyonel adaptördür.
-- Ember aylık/yıllık talep, üretim, emisyon ve karbon yoğunluğu verisi için opsiyonel adaptördür.
-- API anahtarı yoksa uygulama deterministik 24 saatlik Türkiye demo sinyali üretir; demo kırılmaz, testler internete bağlı değildir.
+- EPİAŞ Transparency Platform is modeled as the primary official adapter target for Turkish market, generation, consumption, and transmission data.
+- ENTSO-E Transparency Platform is kept as an alternative adapter target for European power-system data.
+- Electricity Maps is modeled as an optional adapter for carbon intensity, electricity mix, load, and price signals.
+- Ember is modeled as an optional adapter for monthly and yearly demand, generation, emissions, and carbon-intensity datasets.
+- If no API keys are configured, the app generates deterministic 24-hour demo data for Turkey. The demo stays reliable and the tests do not depend on the internet.
 
-Kaynaklar: [EPİAŞ teknik dokümantasyon](https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html), [ENTSO-E Transparency Platform](https://transparency.entsoe.eu/), [Electricity Maps API](https://portal.electricitymaps.com/docs/api), [Ember API](https://ember-energy.org/data/api/).
+Sources: [EPİAŞ technical documentation](https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html), [ENTSO-E Transparency Platform](https://transparency.entsoe.eu/), [Electricity Maps API](https://portal.electricitymaps.com/docs/api), [Ember API](https://ember-energy.org/data/api/).
 
-## Teknoloji yığını
+## Data Refresh Notes
+
+FlexGrid-TR does not currently poll live external APIs. The default grid signal is deterministic virtual data generated for the requested date, so every run is reproducible and CI-safe.
+
+When live adapters are implemented, refresh behavior should be provider- and dataset-specific:
+
+- EPİAŞ: Official Turkish market and transparency datasets are published through EPİAŞ services; refresh cadence depends on the selected dataset and market process.
+- ENTSO-E: Transparency Platform data is exposed through multiple channels, including REST API and file/subscription workflows; publication timing and resolution depend on the data item.
+- Electricity Maps: API endpoints default to hourly temporal granularity and can support 5-minute, 15-minute, hourly, and aggregated historical granularities where available.
+- Ember: Monthly Electricity Data is updated twice per month, with releases in the first and third weeks of the month.
+
+## Tech Stack
 
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
 - Recharts
 - Vitest
-- Senaryo simülasyon motoru
-- Sanal şebeke sinyali API'si
-- Stateless telemetri karşılaştırma API'si
-- CSV ve JSON dışa aktarım
+- Scenario simulation engine
+- Virtual grid signal API
+- Stateless telemetry comparison API
+- CSV and JSON exports
 
-## Hızlı başlangıç
+## Quick Start
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Sonra `http://localhost:3000` adresini aç.
+Open `http://localhost:3000`.
 
-## Kalite komutları
+## Quality Commands
 
 ```bash
 pnpm test
@@ -69,33 +80,33 @@ pnpm build
 pnpm check
 ```
 
-## API örnekleri
+## API Examples
 
-Senaryo JSON:
+Scenario JSON:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4
 ```
 
-Grid sinyalli senaryo JSON:
+Scenario JSON with grid signal:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4&gridProvider=epias&gridDate=2026-05-06
 ```
 
-Senaryo CSV:
+Scenario CSV:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4&format=csv
 ```
 
-Sanal şebeke sinyali:
+Virtual grid signal:
 
 ```text
 /api/grid-signal?provider=demo&date=2026-05-06
 ```
 
-Telemetri karşılaştırması:
+Telemetry comparison:
 
 ```bash
 curl -X POST http://localhost:3000/api/telemetry \
@@ -112,9 +123,9 @@ curl -X POST http://localhost:3000/api/telemetry \
   }'
 ```
 
-## Ortam değişkenleri
+## Environment Variables
 
-Uygulama bu değişkenler olmadan da çalışır. Değerler eklenirse canlı veri adaptörleri aynı API sözleşmesi içinde genişletilebilir.
+The app works without these values. If credentials are added later, live adapters can be implemented while keeping the same API contract.
 
 ```env
 EPIAS_TGT=
@@ -123,26 +134,26 @@ ELECTRICITY_MAPS_TOKEN=
 EMBER_API_KEY=
 ```
 
-## Repo yapısı
+## Repository Structure
 
-- `app/api/scenario/route.ts` - senaryo JSON/CSV dışa aktarım
-- `app/api/grid-signal/route.ts` - sanal/resmi veri uyumlu şebeke sinyali
-- `app/api/telemetry/route.ts` - telemetri doğrulama ve karşılaştırma
-- `components/energy` - kokpit UI ve dashboard panelleri
-- `src/lib/energy/flexgrid.ts` - simülasyon motoru
-- `src/lib/energy/grid-signal.ts` - sanal şebeke sinyali çekirdeği
-- `src/lib/energy/telemetry.ts` - ölçülen-simüle karşılaştırma çekirdeği
-- `tests` - model, telemetri, CSV, grid signal ve API testleri
-- `docs` - mimari, telemetri, doğrulama, API, sanal veri ve yol haritası notları
+- `app/api/scenario/route.ts` - scenario JSON and CSV export
+- `app/api/grid-signal/route.ts` - virtual grid signal endpoint
+- `app/api/telemetry/route.ts` - telemetry validation and comparison
+- `components/energy` - cockpit UI and dashboard panels
+- `src/lib/energy/flexgrid.ts` - simulation engine
+- `src/lib/energy/grid-signal.ts` - virtual grid signal core
+- `src/lib/energy/telemetry.ts` - measured-vs-simulated comparison core
+- `tests` - model, telemetry, CSV, grid signal, and API tests
+- `docs` - architecture, telemetry, validation, API, virtual-data, and roadmap notes
 
-## GitHub açıklaması
+## Suggested GitHub Description
 
-Türkçe enerji esnekliği kokpiti: EV şarjı, trafo yüklenmesi, sanal şebeke sinyali, talep yanıtı ve telemetri doğrulaması.
+Energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.
 
-## Önerilen topic'ler
+## Suggested Topics
 
 `nextjs`, `typescript`, `energy`, `smart-grid`, `demand-response`, `ev-charging`, `power-systems`, `telemetry`, `recharts`, `turkey`
 
-## Lisans
+## License
 
 MIT. Copyright (c) 2026 Emre Bulut.

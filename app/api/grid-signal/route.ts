@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error: "INVALID_GRID_PROVIDER",
-        message: "provider demo, epias, entsoe, electricity-maps veya ember olmalı.",
+        message: "provider must be demo, epias, entsoe, electricity-maps, or ember.",
         allowedProviders: flexgridGridProviders.map((provider) => provider.id)
       },
       { status: 400 }
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error: "INVALID_GRID_DATE",
-        message: "date YYYY-MM-DD formatında olmalı."
+        message: "date must use YYYY-MM-DD format."
       },
       { status: 400 }
     );

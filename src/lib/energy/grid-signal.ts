@@ -47,36 +47,36 @@ export const flexgridGridProviders: Array<{
 }> = [
   {
     id: "demo",
-    label: "Sanal Demo",
-    description: "Anahtarsız, deterministik 24 saatlik Türkiye şebeke sinyali.",
+    label: "Virtual Demo",
+    description: "Keyless deterministic 24-hour grid signal for Turkey.",
     sourceUrl: "local://flexgrid-tr/demo-grid-signal",
     requiresCredential: false
   },
   {
     id: "epias",
-    label: "EPİAŞ Şeffaflık",
-    description: "Türkiye piyasa, üretim, tüketim ve iletim verileri için resmi uyum katmanı.",
+    label: "EPİAŞ Transparency",
+    description: "Official adapter target for Turkish market, generation, consumption, and transmission data.",
     sourceUrl: "https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html",
     requiresCredential: true
   },
   {
     id: "entsoe",
     label: "ENTSO-E",
-    description: "Avrupa şeffaflık platformu; yük, üretim ve fiyat verisi adaptörü.",
+    description: "European transparency platform adapter for load, generation, and price data.",
     sourceUrl: "https://transparency.entsoe.eu/",
     requiresCredential: true
   },
   {
     id: "electricity-maps",
     label: "Electricity Maps",
-    description: "Karbon yoğunluğu, üretim karışımı, yük ve fiyat sinyali adaptörü.",
+    description: "Adapter target for carbon intensity, electricity mix, load, and price signals.",
     sourceUrl: "https://portal.electricitymaps.com/docs/api",
     requiresCredential: true
   },
   {
     id: "ember",
     label: "Ember",
-    description: "Aylık/yıllık ülke bazlı talep, üretim, emisyon ve karbon yoğunluğu verisi adaptörü.",
+    description: "Adapter target for monthly and yearly country-level demand, generation, emissions, and carbon intensity data.",
     sourceUrl: "https://ember-energy.org/data/api/",
     requiresCredential: true
   }
@@ -124,7 +124,7 @@ export function normalizeGridSignalInput(input: FlexgridGridSignalInput = {}) {
 }
 
 function sourceLabelForProvider(provider: FlexgridGridProvider) {
-  return flexgridGridProviders.find((item) => item.id === provider)?.label ?? "Sanal Demo";
+  return flexgridGridProviders.find((item) => item.id === provider)?.label ?? "Virtual Demo";
 }
 
 function statusForProvider(provider: FlexgridGridProvider): FlexgridGridSignalStatus {
@@ -206,15 +206,15 @@ export function buildDemoGridSignal(input: FlexgridGridSignalInput = {}): Flexgr
       highRiskHours,
       dispatchAdvice:
         highRiskHours > 0
-          ? "EV şarjını ve batarya deşarjını yüksek risk saatlerine göre yeniden planla."
-          : "Şebeke riski düşük; esnek yükleri düşük fiyat ve düşük karbon saatlerine taşı."
+          ? "Reschedule EV charging and battery discharge around the high-risk grid hours."
+          : "Grid risk is low; move flexible loads toward low-price and low-carbon hours."
     },
     integrationNotes:
       provider === "demo"
-        ? ["Bu veri deterministik sanal modeldir; fiziksel donanım veya API anahtarı gerektirmez."]
+        ? ["This is deterministic virtual data; it does not require physical hardware or an API key."]
         : [
-            `${sourceLabelForProvider(provider)} seçildi; API kimliği tanımlanana kadar aynı veri şemasıyla sanal yedek veri kullanılır.`,
-            "Canlı entegrasyon eklendiğinde endpoint sözleşmesi değişmeden kalır."
+            `${sourceLabelForProvider(provider)} is selected; virtual fallback data is used with the same schema until credentials are configured.`,
+            "The endpoint contract stays stable when a live adapter is added."
           ]
   };
 }

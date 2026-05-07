@@ -28,7 +28,7 @@ describe("FlexGrid public grid signal", () => {
 
     expect(signal.provider).toBe("epias");
     expect(signal.status).toBe("fallback");
-    expect(signal.integrationNotes.join(" ")).toContain("sanal yedek");
+    expect(signal.integrationNotes.join(" ")).toContain("virtual fallback");
   });
 
   it("keeps the provider allow-list explicit", () => {

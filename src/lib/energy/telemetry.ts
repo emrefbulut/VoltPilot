@@ -64,7 +64,7 @@ function normalizeSample(value: unknown, index: number):
   | { ok: true; sample: FlexgridTelemetrySample }
   | { ok: false; error: string } {
   if (!isRecord(value)) {
-    return { ok: false, error: `samples[${index}] bir nesne olmalı` };
+    return { ok: false, error: `samples[${index}] must be an object` };
   }
 
   const hourIndex = Number(value.hourIndex);
@@ -74,23 +74,23 @@ function normalizeSample(value: unknown, index: number):
   const powerFactor = value.powerFactor === undefined ? undefined : Number(value.powerFactor);
 
   if (!Number.isInteger(hourIndex) || hourIndex < 0 || hourIndex > 23) {
-    return { ok: false, error: `samples[${index}].hourIndex 0 ile 23 arasında tam sayı olmalı` };
+    return { ok: false, error: `samples[${index}].hourIndex must be an integer from 0 to 23` };
   }
 
   if (!Number.isFinite(measuredKw) || measuredKw < 0) {
-    return { ok: false, error: `samples[${index}].measuredKw negatif olmayan sayı olmalı` };
+    return { ok: false, error: `samples[${index}].measuredKw must be a non-negative number` };
   }
 
   if (voltageV !== undefined && (!Number.isFinite(voltageV) || voltageV < 180 || voltageV > 480)) {
-    return { ok: false, error: `samples[${index}].voltageV girildiyse 180 ile 480 arasında olmalı` };
+    return { ok: false, error: `samples[${index}].voltageV must be between 180 and 480 when provided` };
   }
 
   if (currentA !== undefined && (!Number.isFinite(currentA) || currentA < 0)) {
-    return { ok: false, error: `samples[${index}].currentA girildiyse negatif olmayan sayı olmalı` };
+    return { ok: false, error: `samples[${index}].currentA must be a non-negative number when provided` };
   }
 
   if (powerFactor !== undefined && (!Number.isFinite(powerFactor) || powerFactor < 0.5 || powerFactor > 1)) {
-    return { ok: false, error: `samples[${index}].powerFactor girildiyse 0.5 ile 1 arasında olmalı` };
+    return { ok: false, error: `samples[${index}].powerFactor must be between 0.5 and 1 when provided` };
   }
 
   return {
@@ -129,15 +129,15 @@ export function validateTelemetrySamples(value: unknown):
   | { ok: true; samples: FlexgridTelemetrySample[] }
   | { ok: false; errors: string[] } {
   if (!Array.isArray(value)) {
-    return { ok: false, errors: ["samples bir dizi olmalı"] };
+    return { ok: false, errors: ["samples must be an array"] };
   }
 
   if (value.length === 0) {
-    return { ok: false, errors: ["samples en az bir telemetri örneği içermeli"] };
+    return { ok: false, errors: ["samples must contain at least one telemetry sample"] };
   }
 
   if (value.length > 96) {
-    return { ok: false, errors: ["samples 96 noktadan fazla olamaz"] };
+    return { ok: false, errors: ["samples cannot contain more than 96 points"] };
   }
 
   const errors: string[] = [];
@@ -161,32 +161,32 @@ function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): Flexg
   if (metrics.status === "action") {
     recommendations.push({
       priority: "high",
-      title: "Ölçülen pik farkını incele",
-      detail: "Ölçülen yük simülasyondan belirgin sapıyor. Dağıtım kararlarına güvenmeden önce EV oturum varsayımlarını ve trafo akım okumalarını yeniden kontrol et."
+      title: "Investigate measured peak mismatch",
+      detail: "Measured load deviates materially from the simulation. Re-check EV session assumptions and transformer current readings before trusting dispatch decisions."
     });
   }
 
   if (metrics.energyDeltaKwh > 8) {
     recommendations.push({
       priority: "medium",
-      title: "Günlük enerji bazını kalibre et",
-      detail: "Ölçülen enerji simüle edilenden yüksek. Tesis baz yük profilini güncelle veya termal yükler için ölçülen kanal ekle."
+      title: "Calibrate the daily energy baseline",
+      detail: "Measured energy is higher than simulated energy. Update the facility base-load profile or add a measured channel for thermal loads."
     });
   }
 
   if (metrics.status === "excellent") {
     recommendations.push({
       priority: "low",
-      title: "Senaryo telemetriye hazır",
-      detail: "Mock telemetri simüle edilen profili yeterince yakından izliyor; ileride bir kanal ESP32 veya smart-plug ölçümüyle değiştirilebilir."
+      title: "Scenario is telemetry-ready",
+      detail: "Mock telemetry follows the simulated profile closely enough to replace one channel with ESP32 or smart-plug readings."
     });
   }
 
   if (recommendations.length === 0) {
     recommendations.push({
       priority: "low",
-      title: "Örnek toplamaya devam et",
-      detail: "Model kullanılabilir durumda; daha fazla ölçüm noktası güveni artırır ve dağıtım riskini azaltır."
+      title: "Keep collecting samples",
+      detail: "The model is usable, but more measured points will improve confidence and reduce dispatch risk."
     });
   }
 
@@ -264,12 +264,12 @@ export function parseTelemetryRequestBody(body: unknown):
   | { ok: true; scenarioInput: FlexgridScenarioInput; samples: FlexgridTelemetrySample[]; mode: FlexgridTelemetryMode }
   | { ok: false; errors: string[] } {
   if (!isRecord(body)) {
-    return { ok: false, errors: ["request body JSON nesnesi olmalı"] };
+    return { ok: false, errors: ["request body must be a JSON object"] };
   }
 
   const mode = body.mode === undefined ? "measured" : body.mode;
   if (mode !== "mock" && mode !== "measured") {
-    return { ok: false, errors: ["mode mock veya measured olmalı"] };
+    return { ok: false, errors: ["mode must be mock or measured"] };
   }
 
   const scenarioResult = parseScenarioInput(body.scenario);

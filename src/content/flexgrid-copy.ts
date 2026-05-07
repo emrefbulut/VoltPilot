@@ -1,35 +1,35 @@
 export const flexgridCopy = {
   brand: {
     name: "FlexGrid-TR",
-    label: "Hibrit hazır enerji esnekliği kokpiti",
-    title: "EV şarjı, trafo yüklenmesi, sanal şebeke sinyali ve telemetri doğrulaması için hibrit hazır enerji kokpiti.",
+    label: "Hybrid-ready energy flexibility cockpit",
+    title: "Hybrid-ready energy cockpit for EV charging, transformer loading, virtual grid signals, and telemetry validation.",
     description:
-      "FlexGrid-TR, Türkiye'deki binalar ve küçük tesisler için portfolyo seviyesinde bir mühendislik göstericisidir."
+      "FlexGrid-TR is a portfolio-grade engineering demonstrator for Turkish buildings and small facilities."
   },
   phases: [
     {
-      week: "Faz 1",
-      title: "Simülasyon motoru",
+      week: "Phase 1",
+      title: "Simulation engine",
       description:
-        "Tesis profilleri, EV talebi, tarife planları, batarya SoC, kVA yüklenmesi, akım tahmini ve dışa aktarılabilir senaryo verisi."
+        "Facility profiles, EV demand, tariff plans, battery SoC, kVA loading, current estimates, and exportable scenario data."
     },
     {
-      week: "Faz 2",
-      title: "Karar kokpiti",
+      week: "Phase 2",
+      title: "Decision cockpit",
       description:
-        "Pik azaltımı, aylık tasarruf, karbon etkisi, trafo stresi, mühendislik güveni ve strateji önerileri."
+        "Peak reduction, monthly savings, carbon impact, transformer stress, engineering confidence, and strategy recommendations."
     },
     {
-      week: "Faz 3",
-      title: "Telemetri doğrulama",
+      week: "Phase 3",
+      title: "Telemetry validation",
       description:
-        "Sanal veya ölçülen örnekler stateless POST API üzerinden simüle edilen profille karşılaştırılır."
+        "Mock or measured samples are compared against the simulated profile through a stateless POST API."
     },
     {
-      week: "Faz 4",
-      title: "Sanal şebeke ve açık paket",
+      week: "Phase 4",
+      title: "Virtual grid and public package",
       description:
-        "EPİAŞ/ENTSO-E/Electricity Maps/Ember uyum katmanı, README, mimari, telemetri, doğrulama notları, API örnekleri, MIT lisansı, testler ve CI."
+        "EPİAŞ/ENTSO-E/Electricity Maps/Ember adapter model, README, architecture notes, telemetry guide, validation notes, API examples, MIT license, tests, and CI."
     }
   ],
   stack: [
@@ -38,10 +38,10 @@ export const flexgridCopy = {
     "Tailwind CSS",
     "Recharts",
     "Vitest",
-    "Senaryo simülasyon motoru",
-    "Sanal şebeke sinyali API",
-    "Telemetri karşılaştırma API",
-    "CSV ve JSON dışa aktarım",
+    "Scenario simulation engine",
+    "Virtual grid signal API",
+    "Telemetry comparison API",
+    "CSV and JSON exports",
     "Opsiyonel ESP32 / MQTT / smart-plug telemetri"
   ]
 } as const;

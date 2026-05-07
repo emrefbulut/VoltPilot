@@ -121,8 +121,8 @@ export type FlexgridScenario = {
 
 export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile> = {
   apartment: {
-    label: "Apartman bloğu",
-    shortLabel: "Apartman",
+    label: "Apartment block",
+    shortLabel: "Apartment",
     baseLoadKw: 11,
     dailyKwh: 208,
     transformerLimitKw: 42,
@@ -137,8 +137,8 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     hourlyShape: [0.48, 0.46, 0.45, 0.45, 0.47, 0.5, 0.58, 0.66, 0.71, 0.73, 0.75, 0.77, 0.79, 0.81, 0.84, 0.89, 0.97, 1.04, 1.18, 1.28, 1.34, 1.27, 1.05, 0.76]
   },
   workshop: {
-    label: "KOBİ üretim atölyesi",
-    shortLabel: "Atölye",
+    label: "Small manufacturing workshop",
+    shortLabel: "Workshop",
     baseLoadKw: 18,
     dailyKwh: 312,
     transformerLimitKw: 58,
@@ -153,8 +153,8 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     hourlyShape: [0.36, 0.34, 0.33, 0.33, 0.34, 0.39, 0.64, 0.9, 1.14, 1.2, 1.22, 1.24, 1.2, 1.19, 1.21, 1.18, 1.11, 0.88, 0.66, 0.56, 0.5, 0.45, 0.4, 0.37]
   },
   cafe: {
-    label: "Kafe ve restoran",
-    shortLabel: "Kafe",
+    label: "Cafe and restaurant",
+    shortLabel: "Cafe",
     baseLoadKw: 14,
     dailyKwh: 256,
     transformerLimitKw: 46,
@@ -169,8 +169,8 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     hourlyShape: [0.37, 0.35, 0.34, 0.33, 0.35, 0.42, 0.55, 0.68, 0.78, 0.86, 0.95, 1.05, 1.14, 1.08, 1.02, 0.98, 1.03, 1.16, 1.28, 1.36, 1.32, 1.18, 0.86, 0.58]
   },
   lab: {
-    label: "Üniversite elektronik laboratuvarı",
-    shortLabel: "Laboratuvar",
+    label: "University electronics lab",
+    shortLabel: "Lab",
     baseLoadKw: 16,
     dailyKwh: 288,
     transformerLimitKw: 52,
@@ -193,18 +193,18 @@ export const flexgridStrategyOptions: Array<{
 }> = [
   {
     id: "baseline",
-    label: "Kontrolsüz",
-    description: "Yükler koordinasyon olmadan doğal davranışını izler."
+    label: "Uncontrolled",
+    description: "Loads follow natural behavior with no coordination."
   },
   {
     id: "tou",
-    label: "Tarife duyarlı",
-    description: "EV şarjı ve esnek yükler daha ucuz saatlere kaydırılır."
+    label: "Tariff aware",
+    description: "EV charging and flexible loads move toward lower-cost hours."
   },
   {
     id: "orchestrated",
-    label: "Orkestre",
-    description: "EV şarjı, esnek yükler ve batarya tek bir portföy gibi yönetilir."
+    label: "Orchestrated",
+    description: "EV charging, flexible loads, and storage act as one portfolio."
   }
 ];
 
@@ -214,9 +214,9 @@ export const flexgridBatteryOptions: Array<{
   capacityKwh: number;
   maxPowerKw: number;
 }> = [
-  { id: "none", label: "Batarya yok", capacityKwh: 0, maxPowerKw: 0 },
-  { id: "small", label: "Küçük batarya", capacityKwh: 12, maxPowerKw: 3 },
-  { id: "medium", label: "Orta batarya", capacityKwh: 28, maxPowerKw: 6 }
+  { id: "none", label: "No battery", capacityKwh: 0, maxPowerKw: 0 },
+  { id: "small", label: "Small battery", capacityKwh: 12, maxPowerKw: 3 },
+  { id: "medium", label: "Medium battery", capacityKwh: 28, maxPowerKw: 6 }
 ];
 
 export const flexgridTariffOptions: Array<{
@@ -226,18 +226,18 @@ export const flexgridTariffOptions: Array<{
 }> = [
   {
     id: "flat",
-    label: "Sabit tarife",
-    description: "Günün tamamında tek enerji fiyatı."
+    label: "Flat tariff",
+    description: "Single energy price across the day."
   },
   {
     id: "tou",
-    label: "Zaman bazlı",
-    description: "Gündüz ve akşam piklerinde daha yüksek maliyet."
+    label: "Time-of-use",
+    description: "Higher cost in daytime and evening peaks."
   },
   {
     id: "critical",
-    label: "Kritik pik",
-    description: "Yerel pik aralığında güçlü ceza fiyatı."
+    label: "Critical peak",
+    description: "Strong penalty during the local peak window."
   }
 ];
 
@@ -479,28 +479,28 @@ function buildAssets(chart: FlexgridScenarioPoint[]): FlexgridAssetContribution[
   return [
     {
       id: "building",
-      label: "Bina baz yükü",
+      label: "Building base",
       valueKw: peakPoint.buildingLoadKw,
       sharePct: Math.round((peakPoint.buildingLoadKw / total) * 100),
       status: "fixed"
     },
     {
       id: "thermal",
-      label: "Termal yük",
+      label: "Thermal load",
       valueKw: peakPoint.thermalLoadKw,
       sharePct: Math.round((peakPoint.thermalLoadKw / total) * 100),
       status: "flexible"
     },
     {
       id: "ev",
-      label: "EV şarjı",
+      label: "EV charging",
       valueKw: peakPoint.evLoadKw,
       sharePct: Math.round((peakPoint.evLoadKw / total) * 100),
       status: "flexible"
     },
     {
       id: "battery",
-      label: "Batarya desteği",
+      label: "Storage support",
       valueKw: peakPoint.batteryKw,
       sharePct: Math.round((Math.max(0, peakPoint.batteryKw) / total) * 100),
       status: "support"
@@ -514,46 +514,46 @@ function buildRecommendations(metrics: FlexgridScenarioMetrics, input: FlexgridS
   if (metrics.overloadHours > 0) {
     recommendations.push({
       priority: "high",
-      title: "Ölçeklemeden önce trafo aşımını çöz",
-      detail: `${metrics.overloadHours} simülasyon saati kVA sınırını aşıyor. Yeni yük eklemeden önce eş zamanlı EV şarjını azalt veya batarya desteğini artır.`
+      title: "Resolve transformer overload before scaling",
+      detail: `${metrics.overloadHours} simulated hour(s) exceed the kVA limit. Reduce coincident EV charging or increase storage support before adding more load.`
     });
   } else if (metrics.transformerStress >= 85) {
     recommendations.push({
       priority: "high",
-      title: "Önce yerel trafonun güvenliğini koru",
-      detail: "Pik stres yüksek. EV şarjını yerel pik pencerenin dışında tut ve batarya deşarjını en yoğun iki saate ayır."
+      title: "Protect the local transformer first",
+      detail: "Peak stress is high. Keep EV charging below the local peak window and reserve battery discharge for the top two hours."
     });
   }
 
   if (metrics.monthlySavingsTl >= 3000) {
     recommendations.push({
       priority: "medium",
-      title: "Bu senaryoyu talep yanıtı playbook'una çevir",
-      detail: "Mevcut strateji görünür aylık tasarruf üretiyor; sonraki sürüm olayları saklayıp planlanan ve gerçekleşen azaltımı karşılaştırabilir."
+      title: "Turn this scenario into a demand-response playbook",
+      detail: "The current strategy produces visible monthly savings, so the next version should store events and compare planned vs actual reduction."
     });
   }
 
   if (input.batteryMode === "none") {
     recommendations.push({
       priority: "medium",
-      title: "Küçük batarya seçeneğini modelle",
-      detail: "Küçük bir batarya, projeyi donanım ağırlıklı yapmadan pik kırpma etkisini göstermek için yeterli."
+      title: "Model a small storage option",
+      detail: "A small battery is enough to demonstrate peak shaving without making the project hardware-heavy."
     });
   }
 
   if (input.evCount >= 6) {
     recommendations.push({
       priority: "low",
-      title: "EV oturum önceliği ekle",
-      detail: "Eş zamanlı EV sayısı arttığında sonraki adım, kalkış saati ve minimum enerji ihtiyacına göre şarj önceliği atamak."
+      title: "Add EV session prioritization",
+      detail: "With more concurrent EVs, the next step is assigning charging priority by departure time and minimum required energy."
     });
   }
 
   if (recommendations.length === 0) {
     recommendations.push({
       priority: "low",
-      title: "Telemetriye hazır",
-      detail: "Senaryo, bir sanal veri akışının veya ileride ESP32/smart-plug ölçümünün simülasyon kanallarından birinin yerine geçmesi için yeterince stabil."
+      title: "Ready for telemetry",
+      detail: "The scenario is stable enough for a virtual data feed or future ESP32/smart-plug measurement to replace one simulated channel."
     });
   }
 
@@ -579,7 +579,7 @@ function buildComparison(input: FlexgridScenarioInput): FlexgridComparison[] {
 }
 
 function buildSummary(site: FlexgridSiteProfile, metrics: FlexgridScenarioMetrics) {
-  return `${site.label} bu senaryoda pik talebi %${metrics.peakReductionPct} (${metrics.peakEventReductionKw.toLocaleString("tr-TR")} kW) azaltabilir ve yaklaşık ${metrics.monthlySavingsTl.toLocaleString("tr-TR")} TL/ay tasarruf sağlayabilir.`;
+  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("en-US")} kW) and save about ${metrics.monthlySavingsTl.toLocaleString("en-US")} TL/month under this scenario.`;
 }
 
 export function isFlexgridSiteType(value: string | null): value is FlexgridSiteType {
