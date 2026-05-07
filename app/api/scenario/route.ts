@@ -43,6 +43,7 @@ export async function GET(request: Request) {
         flexgridTariffOptions.find((option) => option.id === params.tariffPlan)?.label ?? params.tariffPlan
       ],
       ["evCount", params.evCount],
+      ["analysisDays", params.analysisDays ?? 1],
       ["peakKw", scenario.metrics.peakKw],
       ["peakKva", scenario.metrics.peakKva],
       ["baselinePeakKw", scenario.metrics.baselinePeakKw],
@@ -50,6 +51,8 @@ export async function GET(request: Request) {
       ["peakReductionPct", scenario.metrics.peakReductionPct],
       ["peakEventReductionKw", scenario.metrics.peakEventReductionKw],
       ["dailyEnergyKwh", scenario.metrics.dailyEnergyKwh],
+      ["analysisEnergyKwh", scenario.metrics.analysisEnergyKwh],
+      ["analysisCostTl", scenario.metrics.analysisCostTl],
       ["monthlyCostTl", scenario.metrics.monthlyCostTl],
       ["monthlySavingsTl", scenario.metrics.monthlySavingsTl],
       ["carbonKgDaily", scenario.metrics.carbonKgDaily],
@@ -76,9 +79,12 @@ export async function GET(request: Request) {
         : []),
       ["summary", scenario.summary],
       [],
-      ["hour", "totalLoadKw", "totalKva", "baselineLoadKw", "buildingLoadKw", "thermalLoadKw", "evLoadKw", "batteryKw", "batterySocPct", "estimatedCurrentA", "transformerLoadingPct", "flexibleLoadKw", "tariffTlPerKwh", "carbonKg"],
+      ["hour", "hourIndex", "dayIndex", "hourOfDay", "totalLoadKw", "totalKva", "baselineLoadKw", "buildingLoadKw", "thermalLoadKw", "evLoadKw", "batteryKw", "batterySocPct", "estimatedCurrentA", "transformerLoadingPct", "flexibleLoadKw", "tariffTlPerKwh", "carbonKg"],
       ...scenario.chart.map((item) => [
         item.hour,
+        item.hourIndex,
+        item.dayIndex,
+        item.hourOfDay,
         item.totalLoadKw,
         item.totalKva,
         item.baselineLoadKw,
@@ -95,7 +101,7 @@ export async function GET(request: Request) {
       ])
     ];
 
-    return new Response(buildCsv(["metric", "value", "extra_1", "extra_2", "extra_3", "extra_4", "extra_5", "extra_6", "extra_7", "extra_8", "extra_9", "extra_10", "extra_11", "extra_12"], rows), {
+    return new Response(buildCsv(["metric", "value", "extra_1", "extra_2", "extra_3", "extra_4", "extra_5", "extra_6", "extra_7", "extra_8", "extra_9", "extra_10", "extra_11", "extra_12", "extra_13", "extra_14", "extra_15"], rows), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="flexgrid-tr-${params.siteType}-${params.strategy}.csv"`

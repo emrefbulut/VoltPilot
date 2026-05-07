@@ -50,4 +50,34 @@ describe("FlexGrid simulation engine", () => {
     expect(scenario.metrics.engineeringConfidence).toBeGreaterThanOrEqual(35);
     expect(scenario.chart).toHaveLength(24);
   });
+
+  it("builds a continuous 7-day analysis horizon", () => {
+    const scenario = buildFlexgridScenario({
+      ...defaultFlexgridScenario,
+      analysisDays: 7
+    });
+
+    expect(scenario.chart).toHaveLength(168);
+    expect(scenario.metrics.analysisDays).toBe(7);
+    expect(scenario.metrics.analysisEnergyKwh).toBeGreaterThan(scenario.metrics.dailyEnergyKwh);
+    expect(scenario.chart.at(-1)?.hourIndex).toBe(167);
+  });
+
+  it("lets the optimizer reduce peak load compared with uncontrolled operation", () => {
+    const uncontrolled = buildFlexgridScenario({
+      ...defaultFlexgridScenario,
+      strategy: "baseline",
+      batteryMode: "medium",
+      evCount: 8
+    });
+    const optimized = buildFlexgridScenario({
+      ...defaultFlexgridScenario,
+      strategy: "optimizer",
+      batteryMode: "medium",
+      evCount: 8
+    });
+
+    expect(optimized.metrics.peakKw).toBeLessThan(uncontrolled.metrics.peakKw);
+    expect(optimized.metrics.engineeringConfidence).toBeGreaterThanOrEqual(uncontrolled.metrics.engineeringConfidence);
+  });
 });

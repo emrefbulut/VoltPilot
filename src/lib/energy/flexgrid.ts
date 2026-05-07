@@ -1,7 +1,8 @@
 export type FlexgridSiteType = "apartment" | "workshop" | "cafe" | "lab";
-export type FlexgridStrategy = "baseline" | "tou" | "orchestrated";
+export type FlexgridStrategy = "baseline" | "tou" | "orchestrated" | "optimizer";
 export type FlexgridBatteryMode = "none" | "small" | "medium";
 export type FlexgridTariffPlan = "flat" | "tou" | "critical";
+export type FlexgridAnalysisDays = 1 | 7;
 export type RecommendationPriority = "high" | "medium" | "low";
 
 export type FlexgridSiteProfile = {
@@ -27,11 +28,15 @@ export type FlexgridScenarioInput = {
   batteryMode: FlexgridBatteryMode;
   tariffPlan: FlexgridTariffPlan;
   evCount: number;
+  analysisDays?: FlexgridAnalysisDays;
 };
 
 export type FlexgridScenarioPoint = {
   hour: string;
   hourIndex: number;
+  hourOfDay: number;
+  dayIndex: number;
+  dayLabel: string;
   totalLoadKw: number;
   totalKva: number;
   baselineLoadKw: number;
@@ -52,6 +57,7 @@ export type FlexgridScenarioPoint = {
 };
 
 export type FlexgridScenarioMetrics = {
+  analysisDays: FlexgridAnalysisDays;
   peakKw: number;
   peakKva: number;
   baselinePeakKw: number;
@@ -60,6 +66,9 @@ export type FlexgridScenarioMetrics = {
   peakEventReductionKw: number;
   dailyEnergyKwh: number;
   baselineDailyEnergyKwh: number;
+  analysisEnergyKwh: number;
+  baselineAnalysisEnergyKwh: number;
+  analysisCostTl: number;
   monthlyCostTl: number;
   baselineMonthlyCostTl: number;
   monthlySavingsTl: number;
@@ -205,6 +214,28 @@ export const flexgridStrategyOptions: Array<{
     id: "orchestrated",
     label: "Orchestrated",
     description: "EV charging, flexible loads, and storage act as one portfolio."
+  },
+  {
+    id: "optimizer",
+    label: "Constraint optimizer",
+    description: "A lightweight optimizer targets peak shaving, tariff exposure, and battery SoC limits."
+  }
+];
+
+export const flexgridAnalysisOptions: Array<{
+  id: FlexgridAnalysisDays;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: 1,
+    label: "1 day",
+    description: "Fast 24-hour engineering snapshot."
+  },
+  {
+    id: 7,
+    label: "7 days",
+    description: "Weekly profile with weekday/weekend variation and continuous battery SoC."
   }
 ];
 
@@ -246,7 +277,8 @@ export const defaultFlexgridScenario: FlexgridScenarioInput = {
   strategy: "orchestrated",
   batteryMode: "small",
   tariffPlan: "tou",
-  evCount: 4
+  evCount: 4,
+  analysisDays: 1
 };
 
 const BATTERY_CHARGE_EFFICIENCY = 0.92;
@@ -303,6 +335,30 @@ function batteryOption(mode: FlexgridBatteryMode) {
   return flexgridBatteryOptions.find((option) => option.id === mode) ?? flexgridBatteryOptions[0]!;
 }
 
+function analysisDaysForInput(input: FlexgridScenarioInput): FlexgridAnalysisDays {
+  return input.analysisDays === 7 ? 7 : 1;
+}
+
+function dayLoadFactor(dayIndex: number, analysisDays: FlexgridAnalysisDays) {
+  if (analysisDays === 1) {
+    return 1;
+  }
+
+  const factors = [1, 1.03, 1.04, 1.02, 0.98, 0.9, 0.86];
+
+  return factors[dayIndex % factors.length] ?? 1;
+}
+
+function dayEvFactor(dayIndex: number, analysisDays: FlexgridAnalysisDays) {
+  if (analysisDays === 1) {
+    return 1;
+  }
+
+  const factors = [1, 1.04, 1.08, 1.05, 0.95, 0.72, 0.64];
+
+  return factors[dayIndex % factors.length] ?? 1;
+}
+
 export function calculateFlexgridKva(kw: number, powerFactor: number) {
   return kw / Math.max(0.1, powerFactor);
 }
@@ -323,82 +379,113 @@ function buildChart(input: FlexgridScenarioInput, strategyOverride?: FlexgridStr
   const strategy = strategyOverride ?? input.strategy;
   const profile = flexgridSiteProfiles[input.siteType];
   const battery = batteryOption(input.batteryMode);
-  const flexibleBoost = strategy === "baseline" ? 0 : strategy === "tou" ? 0.12 : 0.24;
-  const thermalRelief = strategy === "baseline" ? 0 : strategy === "tou" ? 0.08 : 0.16;
-  const coordinationRelief = strategy === "orchestrated" ? 0.14 : strategy === "tou" ? 0.06 : 0;
+  const analysisDays = analysisDaysForInput(input);
+  const flexibleBoost = strategy === "baseline" ? 0 : strategy === "tou" ? 0.12 : strategy === "orchestrated" ? 0.24 : 0.32;
+  const thermalRelief = strategy === "baseline" ? 0 : strategy === "tou" ? 0.08 : strategy === "orchestrated" ? 0.16 : 0.22;
+  const coordinationRelief = strategy === "optimizer" ? 0.2 : strategy === "orchestrated" ? 0.14 : strategy === "tou" ? 0.06 : 0;
   let batterySocKwh = battery.capacityKwh * 0.58;
 
-  return profile.hourlyShape.map((shape, hour) => {
-    const peak = isPeakHour(hour, profile.peakHours);
-    const night = hour <= 6 || hour >= 23;
-    const solarWindow = hour >= 10 && hour <= 15;
-    const tariffTlPerKwh = getFlexgridTariffForHour(hour, input.tariffPlan, profile.peakHours);
-    const buildingLoadKw = profile.baseLoadKw * shape;
-    const baselineThermalKw = buildingLoadKw * (peak ? 0.2 : 0.12);
-    const thermalLoadKw = baselineThermalKw * (peak ? 1 - thermalRelief : 1);
-    const baselineEvKw = peak ? input.evCount * 4.3 : input.evCount * 0.35;
+  return Array.from({ length: analysisDays }).flatMap((_, dayIndex) =>
+    profile.hourlyShape.map((shape, hourOfDay) => {
+      const hourIndex = dayIndex * 24 + hourOfDay;
+      const peak = isPeakHour(hourOfDay, profile.peakHours);
+      const night = hourOfDay <= 6 || hourOfDay >= 23;
+      const solarWindow = hourOfDay >= 10 && hourOfDay <= 15;
+      const tariffTlPerKwh = getFlexgridTariffForHour(hourOfDay, input.tariffPlan, profile.peakHours);
+      const loadFactor = dayLoadFactor(dayIndex, analysisDays);
+      const evFactor = dayEvFactor(dayIndex, analysisDays);
+      const buildingLoadKw = profile.baseLoadKw * shape * loadFactor;
+      const baselineThermalKw = buildingLoadKw * (peak ? 0.2 : 0.12);
+      const thermalLoadKw = baselineThermalKw * (peak ? 1 - thermalRelief : 1);
+      const baselineEvKw = (peak ? input.evCount * 4.3 : input.evCount * 0.35) * evFactor;
 
-    let evLoadKw = baselineEvKw;
-    if (strategy === "tou") {
-      evLoadKw = night ? input.evCount * 3.5 : peak ? input.evCount * 1.15 : input.evCount * 0.7;
-    }
+      let evLoadKw = baselineEvKw;
+      if (strategy === "tou") {
+        evLoadKw = (night ? input.evCount * 3.5 : peak ? input.evCount * 1.15 : input.evCount * 0.7) * evFactor;
+      }
 
-    if (strategy === "orchestrated") {
-      evLoadKw = night || solarWindow ? input.evCount * 2.8 : peak ? input.evCount * 0.65 : input.evCount * 0.85;
-    }
+      if (strategy === "orchestrated") {
+        evLoadKw = (night || solarWindow ? input.evCount * 2.8 : peak ? input.evCount * 0.65 : input.evCount * 0.85) * evFactor;
+      }
 
-    let batteryKw = 0;
-    if (strategy !== "baseline" && battery.capacityKwh > 0 && peak) {
-      const availableOutputKw = batterySocKwh * BATTERY_DISCHARGE_EFFICIENCY;
-      batteryKw = Math.min(battery.maxPowerKw, availableOutputKw);
-      batterySocKwh = Math.max(0, batterySocKwh - batteryKw / BATTERY_DISCHARGE_EFFICIENCY);
-    } else if (strategy === "orchestrated" && battery.capacityKwh > 0 && (solarWindow || night)) {
-      const remainingCapacityKwh = battery.capacityKwh - batterySocKwh;
-      const chargeInputKw = Math.min(1.6, battery.maxPowerKw, remainingCapacityKwh / BATTERY_CHARGE_EFFICIENCY);
-      batteryKw = -Math.max(0, chargeInputKw);
-      batterySocKwh = Math.min(battery.capacityKwh, batterySocKwh + Math.max(0, chargeInputKw) * BATTERY_CHARGE_EFFICIENCY);
-    }
+      if (strategy === "optimizer") {
+        const lowCostWindow = tariffTlPerKwh <= 5.7 || solarWindow || night;
+        const headroomTargetKw = profile.transformerLimitKw * 0.72;
+        const availableHeadroomKw = Math.max(0, headroomTargetKw - buildingLoadKw - thermalLoadKw);
+        const desiredEvKw = lowCostWindow ? input.evCount * 3.2 * evFactor : peak ? input.evCount * 0.35 * evFactor : input.evCount * 0.72 * evFactor;
+        evLoadKw = Math.min(desiredEvKw, Math.max(input.evCount * 0.25 * evFactor, availableHeadroomKw));
+      }
 
-    const chargeLoadKw = Math.max(0, -batteryKw);
-    const dischargeSupportKw = Math.max(0, batteryKw);
-    const totalLoadKw = Math.max(
-      buildingLoadKw + thermalLoadKw + evLoadKw + chargeLoadKw - dischargeSupportKw,
-      profile.baseLoadKw * 0.22
-    );
-    const baselineLoadKw = buildingLoadKw + baselineThermalKw + baselineEvKw;
-    const totalKva = calculateFlexgridKva(totalLoadKw, profile.powerFactor);
-    const baselineKva = calculateFlexgridKva(baselineLoadKw, profile.powerFactor);
-    const transformerLoadingPct = calculateTransformerLoadingPct(totalKva, profile.transformerLimitKva);
-    const estimatedCurrentA = calculateFlexgridCurrentA(totalKva, profile.nominalVoltageV, profile.phaseCount);
-    const flexibleLoadKw = Math.max(totalLoadKw * (profile.shiftableShare + flexibleBoost + coordinationRelief), 0);
-    const carbonKg = totalLoadKw * carbonIntensityForHour(hour, profile.carbonIntensityKgPerKwh);
+      let batteryKw = 0;
+      const preBatteryLoadKw = buildingLoadKw + thermalLoadKw + evLoadKw;
+      const optimizerTargetKw = profile.transformerLimitKw * 0.68;
+      const shouldDischarge =
+        strategy === "optimizer"
+          ? preBatteryLoadKw > optimizerTargetKw || tariffTlPerKwh >= 8.1 || peak
+          : strategy !== "baseline" && peak;
 
-    return {
-      hour: `${hour.toString().padStart(2, "0")}:00`,
-      hourIndex: hour,
-      totalLoadKw: round(totalLoadKw),
-      totalKva: round(totalKva),
-      baselineLoadKw: round(baselineLoadKw),
-      baselineKva: round(baselineKva),
-      buildingLoadKw: round(buildingLoadKw),
-      evLoadKw: round(evLoadKw),
-      thermalLoadKw: round(thermalLoadKw),
-      batteryKw: round(batteryKw),
-      batterySocPct: battery.capacityKwh > 0 ? Math.round((batterySocKwh / battery.capacityKwh) * 100) : 0,
-      flexibleLoadKw: round(flexibleLoadKw),
-      transformerLimitKw: profile.transformerLimitKw,
-      transformerLimitKva: profile.transformerLimitKva,
-      transformerLoadingPct: Math.round(transformerLoadingPct),
-      estimatedCurrentA: Math.round(estimatedCurrentA),
-      tariffTlPerKwh: round(tariffTlPerKwh, 2),
-      carbonKg: round(carbonKg, 2),
-      overloaded: transformerLoadingPct > 100
-    };
-  });
+      if (strategy !== "baseline" && battery.capacityKwh > 0 && shouldDischarge) {
+        const availableOutputKw = batterySocKwh * BATTERY_DISCHARGE_EFFICIENCY;
+        const requestedSupportKw =
+          strategy === "optimizer"
+            ? Math.max(0, preBatteryLoadKw - optimizerTargetKw) || (tariffTlPerKwh >= 8.1 ? battery.maxPowerKw * 0.65 : 0)
+            : battery.maxPowerKw;
+        batteryKw = Math.min(battery.maxPowerKw, availableOutputKw, requestedSupportKw);
+        batterySocKwh = Math.max(0, batterySocKwh - batteryKw / BATTERY_DISCHARGE_EFFICIENCY);
+      } else if ((strategy === "orchestrated" || strategy === "optimizer") && battery.capacityKwh > 0 && (solarWindow || night || tariffTlPerKwh <= 4.2)) {
+        const remainingCapacityKwh = battery.capacityKwh - batterySocKwh;
+        const chargeLimitKw = strategy === "optimizer" ? battery.maxPowerKw * 0.75 : 1.6;
+        const loadHeadroomKw = strategy === "optimizer" ? Math.max(0, profile.transformerLimitKw * 0.74 - preBatteryLoadKw) : chargeLimitKw;
+        const chargeInputKw = Math.min(chargeLimitKw, battery.maxPowerKw, loadHeadroomKw, remainingCapacityKwh / BATTERY_CHARGE_EFFICIENCY);
+        batteryKw = -Math.max(0, chargeInputKw);
+        batterySocKwh = Math.min(battery.capacityKwh, batterySocKwh + Math.max(0, chargeInputKw) * BATTERY_CHARGE_EFFICIENCY);
+      }
+
+      const chargeLoadKw = Math.max(0, -batteryKw);
+      const dischargeSupportKw = Math.max(0, batteryKw);
+      const totalLoadKw = Math.max(
+        buildingLoadKw + thermalLoadKw + evLoadKw + chargeLoadKw - dischargeSupportKw,
+        profile.baseLoadKw * 0.22
+      );
+      const baselineLoadKw = buildingLoadKw + baselineThermalKw + baselineEvKw;
+      const totalKva = calculateFlexgridKva(totalLoadKw, profile.powerFactor);
+      const baselineKva = calculateFlexgridKva(baselineLoadKw, profile.powerFactor);
+      const transformerLoadingPct = calculateTransformerLoadingPct(totalKva, profile.transformerLimitKva);
+      const estimatedCurrentA = calculateFlexgridCurrentA(totalKva, profile.nominalVoltageV, profile.phaseCount);
+      const flexibleLoadKw = Math.max(totalLoadKw * (profile.shiftableShare + flexibleBoost + coordinationRelief), 0);
+      const carbonKg = totalLoadKw * carbonIntensityForHour(hourOfDay, profile.carbonIntensityKgPerKwh);
+      const hourLabel = `${hourOfDay.toString().padStart(2, "0")}:00`;
+
+      return {
+        hour: analysisDays === 1 ? hourLabel : `D${dayIndex + 1} ${hourLabel}`,
+        hourIndex,
+        hourOfDay,
+        dayIndex,
+        dayLabel: `Day ${dayIndex + 1}`,
+        totalLoadKw: round(totalLoadKw),
+        totalKva: round(totalKva),
+        baselineLoadKw: round(baselineLoadKw),
+        baselineKva: round(baselineKva),
+        buildingLoadKw: round(buildingLoadKw),
+        evLoadKw: round(evLoadKw),
+        thermalLoadKw: round(thermalLoadKw),
+        batteryKw: round(batteryKw),
+        batterySocPct: battery.capacityKwh > 0 ? Math.round((batterySocKwh / battery.capacityKwh) * 100) : 0,
+        flexibleLoadKw: round(flexibleLoadKw),
+        transformerLimitKw: profile.transformerLimitKw,
+        transformerLimitKva: profile.transformerLimitKva,
+        transformerLoadingPct: Math.round(transformerLoadingPct),
+        estimatedCurrentA: Math.round(estimatedCurrentA),
+        tariffTlPerKwh: round(tariffTlPerKwh, 2),
+        carbonKg: round(carbonKg, 2),
+        overloaded: transformerLoadingPct > 100
+      };
+    })
+  );
 }
 
 function buildEngineeringConfidence(input: FlexgridScenarioInput, transformerStress: number, overloadHours: number) {
-  const strategyBonus = input.strategy === "orchestrated" ? 9 : input.strategy === "tou" ? 4 : 0;
+  const strategyBonus = input.strategy === "optimizer" ? 12 : input.strategy === "orchestrated" ? 9 : input.strategy === "tou" ? 4 : 0;
   const batteryBonus = input.batteryMode === "none" ? 0 : input.batteryMode === "small" ? 3 : 5;
   const stressPenalty = transformerStress > 100 ? 18 : transformerStress > 90 ? 10 : transformerStress > 75 ? 4 : 0;
   const overloadPenalty = overloadHours * 3;
@@ -409,10 +496,13 @@ function buildEngineeringConfidence(input: FlexgridScenarioInput, transformerStr
 function buildMetrics(input: FlexgridScenarioInput, chart: FlexgridScenarioPoint[]): FlexgridScenarioMetrics {
   const profile = flexgridSiteProfiles[input.siteType];
   const battery = batteryOption(input.batteryMode);
+  const analysisDays = analysisDaysForInput(input);
   const totalEnergy = sum(chart.map((point) => point.totalLoadKw));
   const baselineEnergy = sum(chart.map((point) => point.baselineLoadKw));
-  const monthlyCost = sum(chart.map((point) => point.totalLoadKw * point.tariffTlPerKwh)) * 30;
-  const baselineMonthlyCost = sum(chart.map((point) => point.baselineLoadKw * point.tariffTlPerKwh)) * 30;
+  const analysisCost = sum(chart.map((point) => point.totalLoadKw * point.tariffTlPerKwh));
+  const baselineAnalysisCost = sum(chart.map((point) => point.baselineLoadKw * point.tariffTlPerKwh));
+  const monthlyCost = analysisCost * (30 / analysisDays);
+  const baselineMonthlyCost = baselineAnalysisCost * (30 / analysisDays);
   const peakKw = Math.max(...chart.map((point) => point.totalLoadKw));
   const peakKva = Math.max(...chart.map((point) => point.totalKva));
   const baselinePeakKw = Math.max(...chart.map((point) => point.baselineLoadKw));
@@ -426,29 +516,33 @@ function buildMetrics(input: FlexgridScenarioInput, chart: FlexgridScenarioPoint
   const evEnergyKwh = sum(chart.map((point) => point.evLoadKw));
   const carbonKgDaily = sum(chart.map((point) => point.carbonKg));
   const baselineCarbonKgDaily = sum(
-    chart.map((point) => point.baselineLoadKw * carbonIntensityForHour(point.hourIndex, profile.carbonIntensityKgPerKwh))
+    chart.map((point) => point.baselineLoadKw * carbonIntensityForHour(point.hourOfDay, profile.carbonIntensityKgPerKwh))
   );
   const transformerStress = calculateTransformerLoadingPct(peakKva, profile.transformerLimitKva);
   const shiftedEnergyPct = (sum(chart.map((point) => point.flexibleLoadKw)) / Math.max(totalEnergy, 1)) * 100;
-  const strategyBonus = input.strategy === "orchestrated" ? 12 : input.strategy === "tou" ? 6 : 0;
+  const strategyBonus = input.strategy === "optimizer" ? 16 : input.strategy === "orchestrated" ? 12 : input.strategy === "tou" ? 6 : 0;
   const batteryBonus = input.batteryMode === "none" ? 0 : input.batteryMode === "small" ? 4 : 7;
   const stressPenalty = transformerStress > 100 ? 12 : transformerStress > 90 ? 8 : transformerStress > 75 ? 4 : 0;
   const overloadHours = chart.filter((point) => point.overloaded).length;
   const engineeringConfidence = buildEngineeringConfidence(input, transformerStress, overloadHours);
 
   return {
+    analysisDays,
     peakKw: round(peakKw),
     peakKva: round(peakKva),
     baselinePeakKw: round(baselinePeakKw),
     baselinePeakKva: round(baselinePeakKva),
     peakReductionPct: round(Math.max(0, ((baselinePeakKw - peakKw) / Math.max(baselinePeakKw, 1)) * 100), 0),
     peakEventReductionKw: round(Math.max(0, baselinePeakKw - peakKw)),
-    dailyEnergyKwh: round(totalEnergy),
-    baselineDailyEnergyKwh: round(baselineEnergy),
+    dailyEnergyKwh: round(totalEnergy / analysisDays),
+    baselineDailyEnergyKwh: round(baselineEnergy / analysisDays),
+    analysisEnergyKwh: round(totalEnergy),
+    baselineAnalysisEnergyKwh: round(baselineEnergy),
+    analysisCostTl: Math.round(analysisCost),
     monthlyCostTl: Math.round(monthlyCost),
     baselineMonthlyCostTl: Math.round(baselineMonthlyCost),
     monthlySavingsTl: Math.max(0, Math.round(baselineMonthlyCost - monthlyCost)),
-    carbonKgDaily: round(carbonKgDaily),
+    carbonKgDaily: round(carbonKgDaily / analysisDays),
     carbonReductionPct: round(Math.max(0, ((baselineCarbonKgDaily - carbonKgDaily) / Math.max(baselineCarbonKgDaily, 1)) * 100), 0),
     readinessScore: Math.min(
       98,
@@ -579,7 +673,9 @@ function buildComparison(input: FlexgridScenarioInput): FlexgridComparison[] {
 }
 
 function buildSummary(site: FlexgridSiteProfile, metrics: FlexgridScenarioMetrics) {
-  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("en-US")} kW) and save about ${metrics.monthlySavingsTl.toLocaleString("en-US")} TL/month under this scenario.`;
+  const horizon = metrics.analysisDays === 1 ? "24-hour" : "7-day";
+
+  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("en-US")} kW) and save about ${metrics.monthlySavingsTl.toLocaleString("en-US")} TL/month under this ${horizon} scenario.`;
 }
 
 export function isFlexgridSiteType(value: string | null): value is FlexgridSiteType {
@@ -587,7 +683,7 @@ export function isFlexgridSiteType(value: string | null): value is FlexgridSiteT
 }
 
 export function isFlexgridStrategy(value: string | null): value is FlexgridStrategy {
-  return value === "baseline" || value === "tou" || value === "orchestrated";
+  return value === "baseline" || value === "tou" || value === "orchestrated" || value === "optimizer";
 }
 
 export function isFlexgridBatteryMode(value: string | null): value is FlexgridBatteryMode {
@@ -596,6 +692,12 @@ export function isFlexgridBatteryMode(value: string | null): value is FlexgridBa
 
 export function isFlexgridTariffPlan(value: string | null): value is FlexgridTariffPlan {
   return value === "flat" || value === "tou" || value === "critical";
+}
+
+export function normalizeFlexgridAnalysisDays(value: string | number | null | undefined): FlexgridAnalysisDays {
+  const normalized = Number(value);
+
+  return normalized === 7 ? 7 : 1;
 }
 
 export function clampFlexgridEvCount(value: number) {
@@ -628,11 +730,13 @@ export function buildFlexgridScenario(
           strategy: strategy ?? defaultFlexgridScenario.strategy,
           batteryMode: batteryMode ?? defaultFlexgridScenario.batteryMode,
           tariffPlan,
-          evCount: clampFlexgridEvCount(evCount ?? defaultFlexgridScenario.evCount)
+          evCount: clampFlexgridEvCount(evCount ?? defaultFlexgridScenario.evCount),
+          analysisDays: defaultFlexgridScenario.analysisDays
         }
       : {
           ...inputOrSiteType,
-          evCount: clampFlexgridEvCount(inputOrSiteType.evCount)
+          evCount: clampFlexgridEvCount(inputOrSiteType.evCount),
+          analysisDays: normalizeFlexgridAnalysisDays(inputOrSiteType.analysisDays)
         };
   const site = flexgridSiteProfiles[input.siteType];
   const chart = buildChart(input);

@@ -37,6 +37,14 @@ Main response fields:
 - `summary`: Peak load, peak hour, average price, average carbon intensity, and dispatch advice.
 - `integrationNotes`: Notes for switching from fallback data to live data.
 
+The cockpit also exposes provider metadata beside the chart:
+
+- credential environment variable, when needed
+- source documentation link
+- expected refresh behavior
+- source granularity
+- adapter status: local deterministic or credential-ready
+
 ## Official and Institutional Sources
 
 - EPİAŞ Transparency Platform technical documentation lists REST services for Turkish electricity data: https://seffaflik-prp.epias.com.tr/electricity-service/technical/tr/index.html
@@ -66,5 +74,6 @@ These data sources are not building-meter measurements. They provide national, r
 1. Complete UI, API, and tests with the virtual demo signal.
 2. Fill one of the EPİAŞ, ENTSO-E, Electricity Maps, or Ember adapters with live data.
 3. Connect smart-plug or ESP32 measurements to the `/api/telemetry` contract.
-4. Track measured-vs-simulated difference through MAE, peak error, energy delta, and confidence score.
-5. Calibrate model assumptions against real measurements.
+4. Import CSV telemetry directly in the cockpit when hardware is not available.
+5. Track measured-vs-simulated difference through MAE, peak error, energy delta, and confidence score.
+6. Calibrate model assumptions against real measurements.

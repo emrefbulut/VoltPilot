@@ -6,24 +6,29 @@ The current release is complete as a software-first, hybrid-ready project:
 
 - English interactive operator cockpit
 - Reusable simulation engine
+- 24-hour and 7-day analysis horizons
 - Transformer kVA and current estimates
 - Battery SoC and round-trip efficiency assumptions
 - Browser-local saved scenarios
 - Shareable scenario URLs
 - Mock telemetry overlay
+- Telemetry CSV import with template export
 - `/api/grid-signal` virtual and official-data-ready grid signal
 - Provider model for EPİAŞ, ENTSO-E, Electricity Maps, and Ember
+- Source status metadata for refresh cadence, granularity, credential names, and source documentation
 - `/api/telemetry` measured-vs-simulated comparison
+- `/api/report` Markdown engineering report export
 - JSON and CSV exports
+- Lightweight constraint optimizer for peak shaving, tariff exposure, and battery dispatch
 - Automated tests and CI
 
 ## v1.1 software proof
 
 - Add a README screenshot or short GIF
-- Add downloadable engineering report text for a selected scenario
-- Add optional telemetry sample import from CSV
+- Add chart-image capture inside the engineering report
 - Fill `/api/grid-signal` provider adapters with live API credentials
 - Connect the grid signal more deeply to cost and carbon optimization
+- Add drag-and-drop CSV validation preview
 
 ## v2 live data and optional hardware
 
@@ -37,11 +42,11 @@ The current release is complete as a software-first, hybrid-ready project:
 ## v3 optimization depth
 
 - EV session prioritization by departure time
-- Multi-day battery SoC optimization
+- Multi-day battery SoC optimization with constraints across reporting periods
 - Lightweight database for scenario and telemetry history
 - Monthly engineering report export
 - Basic anomaly detection
 
 ## CV line
 
-Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, virtual grid signals, demand-response analytics, telemetry validation, API exports, and automated tests in one Next.js/TypeScript project.
+Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GET as getGridSignal } from "@/app/api/grid-signal/route";
+import { GET as getReport } from "@/app/api/report/route";
 import { GET as getScenario } from "@/app/api/scenario/route";
 import { POST as postTelemetry } from "@/app/api/telemetry/route";
 import { defaultFlexgridScenario } from "@/src/lib/energy/flexgrid";
@@ -17,6 +18,17 @@ describe("FlexGrid API routes", () => {
     expect(body.metrics.engineeringConfidence).toBeGreaterThan(0);
   });
 
+  it("returns scenario JSON for a 7-day optimizer analysis", async () => {
+    const response = await getScenario(
+      new Request("http://localhost/api/scenario?siteType=workshop&strategy=optimizer&batteryMode=medium&tariffPlan=critical&evCount=8&analysisDays=7")
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.chart).toHaveLength(168);
+    expect(body.metrics.analysisDays).toBe(7);
+  });
+
   it("returns scenario CSV export", async () => {
     const response = await getScenario(new Request("http://localhost/api/scenario?format=csv"));
     const text = await response.text();
@@ -24,6 +36,19 @@ describe("FlexGrid API routes", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/csv");
     expect(text).toContain("engineeringConfidence");
+    expect(text).toContain("analysisDays");
+  });
+
+  it("returns downloadable engineering report markdown", async () => {
+    const response = await getReport(
+      new Request("http://localhost/api/report?siteType=workshop&strategy=optimizer&batteryMode=medium&analysisDays=7")
+    );
+    const text = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("text/markdown");
+    expect(text).toContain("FlexGrid-TR Engineering Report");
+    expect(text).toContain("Analysis horizon: 7 days");
   });
 
   it("returns optional grid signal in scenario JSON", async () => {

@@ -51,6 +51,10 @@ export type FlexgridTelemetryRequest = {
   samples?: unknown;
 };
 
+export type FlexgridTelemetryCsvParseResult =
+  | { ok: true; samples: FlexgridTelemetrySample[]; warnings: string[] }
+  | { ok: false; errors: string[]; warnings: string[] };
+
 function round(value: number, precision = 1) {
   const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
@@ -73,8 +77,8 @@ function normalizeSample(value: unknown, index: number):
   const currentA = value.currentA === undefined ? undefined : Number(value.currentA);
   const powerFactor = value.powerFactor === undefined ? undefined : Number(value.powerFactor);
 
-  if (!Number.isInteger(hourIndex) || hourIndex < 0 || hourIndex > 23) {
-    return { ok: false, error: `samples[${index}].hourIndex must be an integer from 0 to 23` };
+  if (!Number.isInteger(hourIndex) || hourIndex < 0 || hourIndex > 167) {
+    return { ok: false, error: `samples[${index}].hourIndex must be an integer from 0 to 167` };
   }
 
   if (!Number.isFinite(measuredKw) || measuredKw < 0) {
@@ -136,8 +140,8 @@ export function validateTelemetrySamples(value: unknown):
     return { ok: false, errors: ["samples must contain at least one telemetry sample"] };
   }
 
-  if (value.length > 96) {
-    return { ok: false, errors: ["samples cannot contain more than 96 points"] };
+  if (value.length > 168) {
+    return { ok: false, errors: ["samples cannot contain more than 168 points"] };
   }
 
   const errors: string[] = [];
@@ -153,6 +157,118 @@ export function validateTelemetrySamples(value: unknown):
   });
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, samples };
+}
+
+function splitCsvLine(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === "\"" && quoted && next === "\"") {
+      current += "\"";
+      index += 1;
+    } else if (char === "\"") {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  cells.push(current.trim());
+
+  return cells;
+}
+
+function normalizeTelemetryHeader(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function parseTelemetryCsv(text: string): FlexgridTelemetryCsvParseResult {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    return {
+      ok: false,
+      errors: ["CSV must include a header row and at least one telemetry row"],
+      warnings: []
+    };
+  }
+
+  const headers = splitCsvLine(lines[0]!).map(normalizeTelemetryHeader);
+  const hourIndexColumn = headers.findIndex((header) => header === "hourindex" || header === "hour" || header === "index");
+  const measuredKwColumn = headers.findIndex((header) => header === "measuredkw" || header === "kw" || header === "loadkw");
+  const voltageColumn = headers.findIndex((header) => header === "voltagev" || header === "voltage");
+  const currentColumn = headers.findIndex((header) => header === "currenta" || header === "current");
+  const powerFactorColumn = headers.findIndex((header) => header === "powerfactor" || header === "pf");
+
+  if (hourIndexColumn === -1 || measuredKwColumn === -1) {
+    return {
+      ok: false,
+      errors: ["CSV headers must include hourIndex and measuredKw columns"],
+      warnings: []
+    };
+  }
+
+  const rawSamples = lines.slice(1).map((line) => {
+    const cells = splitCsvLine(line);
+    const sample: FlexgridTelemetrySample = {
+      hourIndex: Number(cells[hourIndexColumn]),
+      measuredKw: Number(cells[measuredKwColumn])
+    };
+
+    if (voltageColumn !== -1 && cells[voltageColumn]) {
+      sample.voltageV = Number(cells[voltageColumn]);
+    }
+
+    if (currentColumn !== -1 && cells[currentColumn]) {
+      sample.currentA = Number(cells[currentColumn]);
+    }
+
+    if (powerFactorColumn !== -1 && cells[powerFactorColumn]) {
+      sample.powerFactor = Number(cells[powerFactorColumn]);
+    }
+
+    return sample;
+  });
+  const validation = validateTelemetrySamples(rawSamples);
+
+  if (!validation.ok) {
+    return {
+      ok: false,
+      errors: validation.errors,
+      warnings: []
+    };
+  }
+
+  const seen = new Set<number>();
+  const deduplicated: FlexgridTelemetrySample[] = [];
+  const warnings: string[] = [];
+
+  validation.samples.forEach((sample) => {
+    if (seen.has(sample.hourIndex)) {
+      warnings.push(`Duplicate hourIndex ${sample.hourIndex} was ignored`);
+      return;
+    }
+
+    seen.add(sample.hourIndex);
+    deduplicated.push(sample);
+  });
+
+  return {
+    ok: true,
+    samples: deduplicated.sort((a, b) => a.hourIndex - b.hourIndex),
+    warnings
+  };
 }
 
 function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): FlexgridRecommendation[] {

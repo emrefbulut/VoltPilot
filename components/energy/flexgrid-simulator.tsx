@@ -18,8 +18,12 @@ import {
   Activity,
   ArrowRight,
   BatteryCharging,
+  BrainCircuit,
+  CalendarDays,
   CircuitBoard,
+  DatabaseZap,
   Download,
+  FileText,
   FileJson,
   Gauge,
   Globe2,
@@ -28,12 +32,14 @@ import {
   LineChart,
   PlugZap,
   RadioTower,
+  RotateCcw,
   Route,
   Save,
   ShieldAlert,
   SlidersHorizontal,
   Trash2,
   TrendingDown,
+  Upload,
   Zap,
   type LucideIcon
 } from "lucide-react";
@@ -42,11 +48,13 @@ import {
   buildFlexgridScenario,
   clampFlexgridEvCount,
   defaultFlexgridScenario,
+  flexgridAnalysisOptions,
   flexgridBatteryOptions,
   flexgridSiteProfiles,
   flexgridStrategyOptions,
   flexgridTariffOptions,
   type FlexgridAssetContribution,
+  type FlexgridAnalysisDays,
   type FlexgridBatteryMode,
   type FlexgridScenario,
   type FlexgridScenarioInput,
@@ -65,6 +73,8 @@ import {
 import {
   compareTelemetrySamples,
   generateMockTelemetrySamples,
+  parseTelemetryCsv,
+  type FlexgridTelemetrySample,
   type FlexgridTelemetryComparison
 } from "@/src/lib/energy/telemetry";
 import {
@@ -75,6 +85,7 @@ import {
   type FlexgridGridProvider,
   type FlexgridGridSignal
 } from "@/src/lib/energy/grid-signal";
+import { buildEngineeringReportMarkdown } from "@/src/lib/energy/report";
 
 type SelectorOption<T extends string> = {
   id: T;
@@ -95,10 +106,16 @@ const batteryOptions: SelectorOption<FlexgridBatteryMode>[] = flexgridBatteryOpt
 }));
 
 const navItems = [
-  { href: "#cockpit", label: "Kokpit" },
-  { href: "#architecture", label: "Mimari" },
+  { href: "#cockpit", label: "Cockpit" },
+  { href: "#architecture", label: "Architecture" },
   { href: "#roadmap", label: "Roadmap" }
 ];
+
+const analysisOptions: SelectorOption<string>[] = flexgridAnalysisOptions.map((option) => ({
+  id: String(option.id),
+  label: option.label,
+  description: option.description
+}));
 
 const gridProviderOptions: SelectorOption<FlexgridGridProvider>[] = flexgridGridProviders.map((provider) => ({
   id: provider.id,
@@ -157,19 +174,47 @@ function writeSavedScenarios(scenarios: SavedFlexgridScenario[]) {
 }
 
 function formatTl(value: number) {
-  return `${value.toLocaleString("tr-TR")} TL`;
+  return `${value.toLocaleString("en-US")} TL`;
 }
 
 function formatNumber(value: number, suffix = "") {
-  return `${value.toLocaleString("tr-TR")}${suffix}`;
+  return `${value.toLocaleString("en-US")}${suffix}`;
 }
 
 function formatPct(value: number) {
-  return `${value.toLocaleString("tr-TR")}%`;
+  return `${value.toLocaleString("en-US")}%`;
 }
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function downloadTextFile(filename: string, content: string, mimeType = "text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildTelemetryCsvTemplate(samples: FlexgridTelemetrySample[]) {
+  return [
+    "hourIndex,measuredKw,voltageV,currentA,powerFactor",
+    ...samples.map((sample) =>
+      [
+        sample.hourIndex,
+        sample.measuredKw,
+        sample.voltageV ?? "",
+        sample.currentA ?? "",
+        sample.powerFactor ?? ""
+      ].join(",")
+    )
+  ].join("\n");
 }
 
 function gridStatusLabel(status: FlexgridGridSignal["status"]) {
@@ -428,6 +473,7 @@ function GridSignalPanel({
       : "low";
   const riskyHours = signal.points.filter((point) => point.demandRisk !== "low").map((point) => point.hour);
   const riskWindow = riskyHours.length > 0 ? `${riskyHours[0]} - ${riskyHours.at(-1)}` : "None";
+  const providerMeta = flexgridGridProviders.find((item) => item.id === provider) ?? flexgridGridProviders[0]!;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
@@ -551,6 +597,33 @@ function GridSignalPanel({
         </div>
 
         <div className="space-y-3">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <DatabaseZap className="h-4 w-4 text-teal-700" aria-hidden="true" />
+              <p className="text-sm font-semibold text-slate-950">Source status</p>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs">
+              {[
+                ["Adapter", providerMeta.adapterStatus === "local" ? "Local deterministic" : "Credential-ready"],
+                ["Credential", providerMeta.credentialEnvName ?? "No key required"],
+                ["Refresh", providerMeta.refreshCadence],
+                ["Granularity", providerMeta.granularity]
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-slate-50 p-3">
+                  <p className="font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+                  <p className="mt-1 leading-5 text-slate-700">{value}</p>
+                </div>
+              ))}
+            </div>
+            <a
+              href={providerMeta.sourceUrl}
+              className="mt-3 inline-flex text-xs font-semibold text-teal-700 underline-offset-4 hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open source documentation
+            </a>
+          </div>
           <div className={`rounded-lg border p-4 ${riskClass[highestRisk]}`}>
             <p className="text-sm font-semibold">Dispatch advice</p>
             <p className="mt-2 text-sm leading-6 opacity-75">{signal.summary.dispatchAdvice}</p>
@@ -684,7 +757,17 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
   );
 }
 
-function DecisionPanel({ scenario, exportHref, jsonHref }: { scenario: FlexgridScenario; exportHref: string; jsonHref: string }) {
+function DecisionPanel({
+  scenario,
+  exportHref,
+  jsonHref,
+  reportHref
+}: {
+  scenario: FlexgridScenario;
+  exportHref: string;
+  jsonHref: string;
+  reportHref: string;
+}) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
       <div className="flex items-center gap-2">
@@ -709,7 +792,7 @@ function DecisionPanel({ scenario, exportHref, jsonHref }: { scenario: FlexgridS
           </div>
         ))}
       </div>
-      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Button asChild className="justify-between">
           <a href={exportHref}>
             <span className="inline-flex items-center gap-2">
@@ -724,6 +807,15 @@ function DecisionPanel({ scenario, exportHref, jsonHref }: { scenario: FlexgridS
             <span className="inline-flex items-center gap-2">
               <FileJson className="h-4 w-4" aria-hidden="true" />
               JSON
+            </span>
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </Button>
+        <Button asChild variant="outline" className="justify-between">
+          <a href={reportHref}>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              Report
             </span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </a>
@@ -777,7 +869,7 @@ function ScenarioLibrary({
             <div key={item.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onApplyScenario(item.input)}>
                 <span className="block truncate text-sm font-semibold text-slate-950">{item.label}</span>
-                <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString("tr-TR")}</span>
+                <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString("en-US")}</span>
               </button>
               <button
                 type="button"
@@ -806,12 +898,14 @@ function ControlPanel({
   batteryMode,
   tariffPlan,
   evCount,
+  analysisDays,
   savedScenarios,
   onSiteType,
   onStrategy,
   onBatteryMode,
   onTariffPlan,
   onEvCount,
+  onAnalysisDays,
   onApplyScenario,
   onSaveScenario,
   onDeleteScenario
@@ -822,12 +916,14 @@ function ControlPanel({
   batteryMode: FlexgridBatteryMode;
   tariffPlan: FlexgridTariffPlan;
   evCount: number;
+  analysisDays: FlexgridAnalysisDays;
   savedScenarios: SavedFlexgridScenario[];
   onSiteType: (value: FlexgridSiteType) => void;
   onStrategy: (value: FlexgridStrategy) => void;
   onBatteryMode: (value: FlexgridBatteryMode) => void;
   onTariffPlan: (value: FlexgridTariffPlan) => void;
   onEvCount: (value: number) => void;
+  onAnalysisDays: (value: FlexgridAnalysisDays) => void;
   onApplyScenario: (input: FlexgridScenario["input"]) => void;
   onSaveScenario: () => void;
   onDeleteScenario: (id: string) => void;
@@ -869,6 +965,13 @@ function ControlPanel({
         <SegmentedSelector label="Control" value={strategy} options={flexgridStrategyOptions} onChange={onStrategy} />
         <SegmentedSelector label="Battery" value={batteryMode} options={batteryOptions} onChange={onBatteryMode} />
         <SegmentedSelector label="Tariff" value={tariffPlan} options={flexgridTariffOptions} onChange={onTariffPlan} />
+        <SegmentedSelector
+          label="Analysis horizon"
+          value={String(analysisDays)}
+          options={analysisOptions}
+          columns="two"
+          onChange={(value) => onAnalysisDays(value === "7" ? 7 : 1)}
+        />
 
         <section className="rounded-lg border border-slate-200 bg-slate-950 p-4 text-white">
           <div className="flex items-center justify-between gap-4">
@@ -1015,7 +1118,21 @@ function Recommendations({ scenario }: { scenario: FlexgridScenario }) {
   );
 }
 
-function TelemetryValidation({ comparison }: { comparison: FlexgridTelemetryComparison }) {
+function TelemetryValidation({
+  comparison,
+  modeLabel,
+  importStatus,
+  onTelemetryCsv,
+  onResetTelemetry,
+  onDownloadTemplate
+}: {
+  comparison: FlexgridTelemetryComparison;
+  modeLabel: string;
+  importStatus: string;
+  onTelemetryCsv: (file: File) => void;
+  onResetTelemetry: () => void;
+  onDownloadTemplate: () => void;
+}) {
   const statusClass = {
     excellent: "border-teal-200 bg-teal-50 text-teal-950",
     watch: "border-amber-200 bg-amber-50 text-amber-950",
@@ -1031,13 +1148,26 @@ function TelemetryValidation({ comparison }: { comparison: FlexgridTelemetryComp
         </div>
         <p className="mt-4 text-5xl font-semibold leading-none">{comparison.metrics.confidenceScore}/100</p>
         <p className="mt-4 max-w-2xl text-sm leading-6 opacity-75">
-          Mock sensor samples are compared with the simulated dispatch profile. A future ESP32 or smart-plug feed can
-          post measured samples to the same API contract.
+          {modeLabel} samples are compared with the simulated dispatch profile. A future ESP32, smart-plug export, or
+          CSV measurement file can use the same API contract.
         </p>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] opacity-60">Current source: {modeLabel}</p>
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <p className="text-sm font-semibold text-slate-950">Measured vs simulated</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-slate-950">Measured vs simulated</p>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={onDownloadTemplate}>
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              CSV template
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={onResetTelemetry}>
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Mock
+            </Button>
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           {[
             ["MAE", formatNumber(comparison.metrics.maeKw, " kW")],
@@ -1051,19 +1181,51 @@ function TelemetryValidation({ comparison }: { comparison: FlexgridTelemetryComp
             </div>
           ))}
         </div>
+        <label className="mt-4 flex cursor-pointer flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 transition hover:border-teal-500 hover:bg-teal-50">
+          <span className="inline-flex items-center gap-2 font-semibold text-slate-950">
+            <Upload className="h-4 w-4 text-teal-700" aria-hidden="true" />
+            Import telemetry CSV
+          </span>
+          <span className="text-xs leading-5">
+            Required columns: <span className="font-mono">hourIndex</span> and <span className="font-mono">measuredKw</span>.
+            Optional columns: voltageV, currentA, powerFactor.
+          </span>
+          <input
+            className="sr-only"
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+
+              if (file) {
+                onTelemetryCsv(file);
+                event.currentTarget.value = "";
+              }
+            }}
+          />
+        </label>
+        <p className="mt-3 text-xs leading-5 text-slate-500">{importStatus}</p>
       </section>
     </section>
   );
 }
 
-function EngineeringReport({ scenario }: { scenario: FlexgridScenario }) {
+function EngineeringReport({
+  scenario,
+  onDownloadReport
+}: {
+  scenario: FlexgridScenario;
+  onDownloadReport: () => void;
+}) {
   const rows = [
     ["Peak apparent power", formatNumber(scenario.metrics.peakKva, " kVA")],
     ["Transformer limit", formatNumber(scenario.metrics.transformerLimitKva, " kVA")],
     ["Maximum current", formatNumber(scenario.metrics.maxCurrentA, " A")],
     ["Power factor", scenario.metrics.powerFactor.toFixed(2)],
     ["Battery SoC min/final", `${scenario.metrics.batterySocMinPct}% / ${scenario.metrics.batterySocFinalPct}%`],
-    ["Overload hours", `${scenario.metrics.overloadHours} h`]
+    ["Overload hours", `${scenario.metrics.overloadHours} h`],
+    ["Analysis energy", formatNumber(scenario.metrics.analysisEnergyKwh, " kWh")],
+    ["Analysis cost", formatTl(scenario.metrics.analysisCostTl)]
   ];
 
   return (
@@ -1075,7 +1237,10 @@ function EngineeringReport({ scenario }: { scenario: FlexgridScenario }) {
             Electrical quantities are estimated from the facility power factor and 400 V three-phase service assumptions.
           </p>
         </div>
-        <CircuitBoard className="h-5 w-5 text-teal-700" aria-hidden="true" />
+        <Button type="button" variant="outline" onClick={onDownloadReport}>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Download report
+        </Button>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {rows.map(([label, value]) => (
@@ -1095,23 +1260,28 @@ export function FlexgridSimulator() {
   const [batteryMode, setBatteryMode] = useState<FlexgridBatteryMode>(defaultFlexgridScenario.batteryMode);
   const [tariffPlan, setTariffPlan] = useState<FlexgridTariffPlan>(defaultFlexgridScenario.tariffPlan);
   const [evCount, setEvCount] = useState<number>(defaultFlexgridScenario.evCount);
+  const [analysisDays, setAnalysisDays] = useState<FlexgridAnalysisDays>(defaultFlexgridScenario.analysisDays ?? 1);
   const [gridProvider, setGridProvider] = useState<FlexgridGridProvider>("demo");
   const [gridDate, setGridDate] = useState<string>(todayIsoDate());
   const [savedScenarios, setSavedScenarios] = useState<SavedFlexgridScenario[]>([]);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [importedTelemetrySamples, setImportedTelemetrySamples] = useState<FlexgridTelemetrySample[] | null>(null);
+  const [telemetryImportStatus, setTelemetryImportStatus] = useState("Using deterministic mock telemetry. Import a CSV to compare measured data.");
   const liveInput = useMemo(
     () => ({
       siteType,
       strategy,
       batteryMode,
       tariffPlan,
-      evCount
+      evCount,
+      analysisDays
     }),
-    [batteryMode, evCount, siteType, strategy, tariffPlan]
+    [analysisDays, batteryMode, evCount, siteType, strategy, tariffPlan]
   );
   const deferredInput = useDeferredValue(liveInput);
   const scenario = useMemo(() => buildFlexgridScenario(deferredInput), [deferredInput]);
-  const telemetrySamples = useMemo(() => generateMockTelemetrySamples(scenario.input), [scenario.input]);
+  const mockTelemetrySamples = useMemo(() => generateMockTelemetrySamples(scenario.input), [scenario.input]);
+  const telemetrySamples = importedTelemetrySamples ?? mockTelemetrySamples;
   const telemetryComparison = useMemo(
     () => compareTelemetrySamples(scenario, telemetrySamples),
     [scenario, telemetrySamples]
@@ -1147,6 +1317,7 @@ export function FlexgridSimulator() {
   const exportHref = `/api/scenario?${params}&format=csv`;
   const jsonHref = `/api/scenario?${params}`;
   const gridHref = `/api/grid-signal?provider=${gridProvider}&date=${gridDate}`;
+  const reportHref = `/api/report?${shareParams}`;
   const bestStrategy = useMemo(
     () => scenario.comparison.reduce((best, item) => (item.monthlySavingsTl > best.monthlySavingsTl ? item : best)),
     [scenario.comparison]
@@ -1164,6 +1335,7 @@ export function FlexgridSimulator() {
       setBatteryMode(urlScenario.batteryMode);
       setTariffPlan(urlScenario.tariffPlan);
       setEvCount(urlScenario.evCount);
+      setAnalysisDays(urlScenario.analysisDays ?? 1);
       if (isFlexgridGridProvider(providerParam)) {
         setGridProvider(providerParam);
       }
@@ -1185,6 +1357,7 @@ export function FlexgridSimulator() {
       setBatteryMode(input.batteryMode);
       setTariffPlan(input.tariffPlan);
       setEvCount(input.evCount);
+      setAnalysisDays(input.analysisDays ?? 1);
     });
   }
 
@@ -1192,7 +1365,7 @@ export function FlexgridSimulator() {
     const strategyLabel = flexgridStrategyOptions.find((item) => item.id === scenario.input.strategy)?.label ?? scenario.input.strategy;
     const nextSaved: SavedFlexgridScenario = {
       id: String(Date.now()),
-      label: `${scenario.site.shortLabel} - ${strategyLabel} - ${scenario.input.evCount} EV`,
+      label: `${scenario.site.shortLabel} - ${strategyLabel} - ${scenario.input.evCount} EV - ${scenario.metrics.analysisDays}d`,
       createdAt: new Date().toISOString(),
       input: scenario.input
     };
@@ -1218,6 +1391,52 @@ export function FlexgridSimulator() {
       setCopyState("failed");
       window.setTimeout(() => setCopyState("idle"), 1600);
     }
+  }
+
+  async function handleTelemetryCsv(file: File) {
+    try {
+      const text = await file.text();
+      const parsed = parseTelemetryCsv(text);
+
+      if (!parsed.ok) {
+        setTelemetryImportStatus(`CSV import failed: ${parsed.errors.join("; ")}`);
+        return;
+      }
+
+      setImportedTelemetrySamples(parsed.samples);
+      setTelemetryImportStatus(
+        `Imported ${parsed.samples.length} measured sample(s) from ${file.name}.${parsed.warnings.length > 0 ? ` ${parsed.warnings.join(" ")}` : ""}`
+      );
+    } catch {
+      setTelemetryImportStatus("CSV import failed: the selected file could not be read.");
+    }
+  }
+
+  function resetTelemetryToMock() {
+    setImportedTelemetrySamples(null);
+    setTelemetryImportStatus("Using deterministic mock telemetry. Import a CSV to compare measured data.");
+  }
+
+  function downloadTelemetryTemplate() {
+    downloadTextFile(
+      `flexgrid-tr-telemetry-template-${scenario.metrics.analysisDays}d.csv`,
+      buildTelemetryCsvTemplate(mockTelemetrySamples),
+      "text/csv;charset=utf-8"
+    );
+  }
+
+  function downloadEngineeringReport() {
+    const report = buildEngineeringReportMarkdown({
+      scenario,
+      telemetry: telemetryComparison,
+      gridSignal
+    });
+
+    downloadTextFile(
+      `flexgrid-tr-${scenario.input.siteType}-${scenario.input.strategy}-report.md`,
+      report,
+      "text/markdown;charset=utf-8"
+    );
   }
 
   return (
@@ -1282,12 +1501,14 @@ export function FlexgridSimulator() {
           batteryMode={batteryMode}
           tariffPlan={tariffPlan}
           evCount={evCount}
+          analysisDays={analysisDays}
           savedScenarios={savedScenarios}
           onSiteType={setSiteType}
           onStrategy={setStrategy}
           onBatteryMode={setBatteryMode}
           onTariffPlan={setTariffPlan}
           onEvCount={setEvCount}
+          onAnalysisDays={setAnalysisDays}
           onApplyScenario={applyScenario}
           onSaveScenario={saveCurrentScenario}
           onDeleteScenario={deleteSavedScenario}
@@ -1297,9 +1518,9 @@ export function FlexgridSimulator() {
           <section className="surface-rise grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
             <NetworkMap scenario={scenario} />
             <div className="space-y-5">
-              <DecisionPanel scenario={scenario} exportHref={exportHref} jsonHref={jsonHref} />
+              <DecisionPanel scenario={scenario} exportHref={exportHref} jsonHref={jsonHref} reportHref={reportHref} />
               <MetricTile
-                icon={PlugZap}
+                icon={BrainCircuit}
                 label="Best simulated strategy"
                 value={bestStrategy.label}
                 helper={`${formatTl(bestStrategy.monthlySavingsTl)} monthly savings at ${bestStrategy.peakKw} kW peak`}
@@ -1351,9 +1572,11 @@ export function FlexgridSimulator() {
           <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-950">24-hour load profile</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Selected scenario against uncontrolled operation, mock telemetry, and transformer limit.
+                  <p className="text-sm font-semibold text-slate-950">
+                    {scenario.metrics.analysisDays === 1 ? "24-hour" : "7-day"} load profile
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Selected scenario against uncontrolled operation, mock telemetry, and transformer limit.
                 </p>
               </div>
               <div className="space-y-2 md:text-right">
@@ -1424,8 +1647,15 @@ export function FlexgridSimulator() {
             </div>
           </section>
 
-          <TelemetryValidation comparison={telemetryComparison} />
-          <EngineeringReport scenario={scenario} />
+          <TelemetryValidation
+            comparison={telemetryComparison}
+            modeLabel={importedTelemetrySamples ? "Imported CSV telemetry" : "Mock telemetry"}
+            importStatus={telemetryImportStatus}
+            onTelemetryCsv={handleTelemetryCsv}
+            onResetTelemetry={resetTelemetryToMock}
+            onDownloadTemplate={downloadTelemetryTemplate}
+          />
+          <EngineeringReport scenario={scenario} onDownloadReport={downloadEngineeringReport} />
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
@@ -1467,7 +1697,7 @@ export function FlexgridSimulator() {
             <Recommendations scenario={scenario} />
           </section>
 
-          <section className="grid gap-3 md:grid-cols-3">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricTile
               icon={Zap}
               label="Flexible load share"
@@ -1482,10 +1712,16 @@ export function FlexgridSimulator() {
               tone="amber"
             />
             <MetricTile
-              icon={Activity}
+              icon={PlugZap}
               label="EV energy"
               value={formatNumber(scenario.metrics.evEnergyKwh, " kWh")}
-              helper="Daily charging energy represented in the model"
+              helper="Charging energy represented in the selected horizon"
+            />
+            <MetricTile
+              icon={CalendarDays}
+              label="Analysis horizon"
+              value={scenario.metrics.analysisDays === 1 ? "24 h" : "7 days"}
+              helper={`${formatNumber(scenario.metrics.analysisEnergyKwh, " kWh")} total analysis energy`}
             />
           </section>
         </div>

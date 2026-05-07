@@ -1,6 +1,6 @@
 # FlexGrid-TR
 
-Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, and telemetry validation.
+Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, telemetry validation, and engineering report generation.
 
 FlexGrid-TR is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
 
@@ -14,15 +14,19 @@ FlexGrid-TR demonstrates that workflow in software first. It works today without
 
 - English dashboard and operator cockpit
 - Facility profiles for apartment blocks, workshops, cafes, and electronics labs
-- EV concurrency, tariff plan, control strategy, storage, and scenario preset controls
+- EV concurrency, tariff plan, control strategy, storage, analysis horizon, and scenario preset controls
 - URL-shareable scenarios and browser-local saved scenarios
-- 24-hour load profile with uncontrolled baseline, mock telemetry, and transformer limit
+- 24-hour or 7-day load profile with uncontrolled baseline, mock/imported telemetry, and transformer limit
 - kW, kVA, current, power factor, overload-hour, battery SoC, cost, carbon, and engineering-confidence KPIs
-- Strategy comparison for uncontrolled, tariff-aware, and orchestrated operation
+- Strategy comparison for uncontrolled, tariff-aware, orchestrated, and constraint-optimized operation
+- Lightweight optimizer for peak shaving, tariff exposure, battery SoC, and transformer headroom
 - `/api/grid-signal` virtual grid signal API
 - EPİAŞ, ENTSO-E, Electricity Maps, and Ember adapter-ready provider model
+- Source status panel with credential names, refresh notes, granularity, and documentation links
 - `/api/scenario` JSON and CSV export
 - `/api/telemetry` measured-vs-simulated comparison API
+- Telemetry CSV import in the cockpit with template download
+- `/api/report` downloadable Markdown engineering report
 - Vitest coverage for the simulation engine, telemetry, CSV, grid signal, and API behavior
 - GitHub Actions CI for test, typecheck, lint, and build
 
@@ -88,6 +92,12 @@ Scenario JSON:
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4
 ```
 
+7-day optimizer scenario:
+
+```text
+/api/scenario?siteType=workshop&strategy=optimizer&batteryMode=medium&tariffPlan=critical&evCount=8&analysisDays=7
+```
+
 Scenario JSON with grid signal:
 
 ```text
@@ -123,6 +133,12 @@ curl -X POST http://localhost:3000/api/telemetry \
   }'
 ```
 
+Engineering report:
+
+```text
+/api/report?siteType=workshop&strategy=optimizer&batteryMode=medium&tariffPlan=critical&evCount=8&analysisDays=7&gridProvider=epias&gridDate=2026-05-06
+```
+
 ## Environment Variables
 
 The app works without these values. If credentials are added later, live adapters can be implemented while keeping the same API contract.
@@ -139,10 +155,12 @@ EMBER_API_KEY=
 - `app/api/scenario/route.ts` - scenario JSON and CSV export
 - `app/api/grid-signal/route.ts` - virtual grid signal endpoint
 - `app/api/telemetry/route.ts` - telemetry validation and comparison
+- `app/api/report/route.ts` - Markdown engineering report export
 - `components/energy` - cockpit UI and dashboard panels
 - `src/lib/energy/flexgrid.ts` - simulation engine
 - `src/lib/energy/grid-signal.ts` - virtual grid signal core
 - `src/lib/energy/telemetry.ts` - measured-vs-simulated comparison core
+- `src/lib/energy/report.ts` - report generation core
 - `tests` - model, telemetry, CSV, grid signal, and API tests
 - `docs` - architecture, telemetry, validation, API, virtual-data, and roadmap notes
 

@@ -5,6 +5,7 @@ import {
   isFlexgridSiteType,
   isFlexgridStrategy,
   isFlexgridTariffPlan,
+  normalizeFlexgridAnalysisDays,
   type FlexgridScenarioInput
 } from "@/src/lib/energy/flexgrid";
 
@@ -34,7 +35,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
       strategy: "orchestrated",
       batteryMode: "medium",
       tariffPlan: "critical",
-      evCount: 6
+      evCount: 6,
+      analysisDays: 7
     }
   },
   {
@@ -46,7 +48,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
       strategy: "tou",
       batteryMode: "small",
       tariffPlan: "tou",
-      evCount: 3
+      evCount: 3,
+      analysisDays: 1
     }
   },
   {
@@ -58,7 +61,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
       strategy: "orchestrated",
       batteryMode: "small",
       tariffPlan: "tou",
-      evCount: 4
+      evCount: 4,
+      analysisDays: 1
     }
   }
 ];
@@ -73,7 +77,8 @@ export function createScenarioSearchParams(input: FlexgridScenarioInput) {
     strategy: input.strategy,
     batteryMode: input.batteryMode,
     tariffPlan: input.tariffPlan,
-    evCount: String(input.evCount)
+    evCount: String(input.evCount),
+    analysisDays: String(input.analysisDays ?? defaultFlexgridScenario.analysisDays)
   });
 }
 
@@ -83,13 +88,15 @@ export function parseScenarioSearchParams(params: URLSearchParams): FlexgridScen
   const batteryModeParam = params.get("batteryMode");
   const tariffPlanParam = params.get("tariffPlan");
   const evCountParam = Number(params.get("evCount"));
+  const analysisDaysParam = params.get("analysisDays");
 
   return {
     siteType: isFlexgridSiteType(siteTypeParam) ? siteTypeParam : defaultFlexgridScenario.siteType,
     strategy: isFlexgridStrategy(strategyParam) ? strategyParam : defaultFlexgridScenario.strategy,
     batteryMode: isFlexgridBatteryMode(batteryModeParam) ? batteryModeParam : defaultFlexgridScenario.batteryMode,
     tariffPlan: isFlexgridTariffPlan(tariffPlanParam) ? tariffPlanParam : defaultFlexgridScenario.tariffPlan,
-    evCount: clampFlexgridEvCount(evCountParam)
+    evCount: clampFlexgridEvCount(evCountParam),
+    analysisDays: normalizeFlexgridAnalysisDays(analysisDaysParam)
   };
 }
 
@@ -108,9 +115,12 @@ export function parseScenarioInput(value: unknown):
   const tariffPlan =
     typeof value.tariffPlan === "string" && isFlexgridTariffPlan(value.tariffPlan) ? value.tariffPlan : null;
   const evCount = typeof value.evCount === "number" ? value.evCount : Number(value.evCount);
+  const analysisDays = normalizeFlexgridAnalysisDays(
+    typeof value.analysisDays === "number" || typeof value.analysisDays === "string" ? value.analysisDays : undefined
+  );
 
   if (!siteType) errors.push("scenario.siteType must be apartment, workshop, cafe, or lab");
-  if (!strategy) errors.push("scenario.strategy must be baseline, tou, or orchestrated");
+  if (!strategy) errors.push("scenario.strategy must be baseline, tou, orchestrated, or optimizer");
   if (!batteryMode) errors.push("scenario.batteryMode must be none, small, or medium");
   if (!tariffPlan) errors.push("scenario.tariffPlan must be flat, tou, or critical");
   if (!Number.isFinite(evCount) || evCount < 0 || evCount > 12) errors.push("scenario.evCount must be a number from 0 to 12");
@@ -126,7 +136,8 @@ export function parseScenarioInput(value: unknown):
       strategy,
       batteryMode,
       tariffPlan,
-      evCount: clampFlexgridEvCount(evCount)
+      evCount: clampFlexgridEvCount(evCount),
+      analysisDays
     }
   };
 }

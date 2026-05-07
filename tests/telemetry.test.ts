@@ -3,6 +3,7 @@ import { buildFlexgridScenario, defaultFlexgridScenario } from "@/src/lib/energy
 import {
   compareTelemetrySamples,
   generateMockTelemetrySamples,
+  parseTelemetryCsv,
   parseTelemetryRequestBody,
   validateTelemetrySamples
 } from "@/src/lib/energy/telemetry";
@@ -26,7 +27,7 @@ describe("FlexGrid telemetry comparison", () => {
   });
 
   it("rejects invalid telemetry samples", () => {
-    const result = validateTelemetrySamples([{ hourIndex: 25, measuredKw: -2 }]);
+    const result = validateTelemetrySamples([{ hourIndex: 200, measuredKw: -2 }]);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -44,5 +45,25 @@ describe("FlexGrid telemetry comparison", () => {
     if (result.ok) {
       expect(result.samples).toHaveLength(24);
     }
+  });
+
+  it("parses measured telemetry from CSV text", () => {
+    const result = parseTelemetryCsv("hourIndex,measuredKw,voltageV,currentA,powerFactor\n0,12.5,400,20,0.9\n1,13.2,400,21,0.9");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.samples).toHaveLength(2);
+      expect(result.samples[0]?.measuredKw).toBe(12.5);
+    }
+  });
+
+  it("supports weekly telemetry sample bounds", () => {
+    const samples = generateMockTelemetrySamples({
+      ...defaultFlexgridScenario,
+      analysisDays: 7
+    });
+
+    expect(samples).toHaveLength(168);
+    expect(validateTelemetrySamples(samples).ok).toBe(true);
   });
 });
