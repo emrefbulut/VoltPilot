@@ -66,6 +66,14 @@ export async function GET(request: Request) {
       ["overloadHours", scenario.metrics.overloadHours],
       ["batterySocMinPct", scenario.metrics.batterySocMinPct],
       ["batterySocFinalPct", scenario.metrics.batterySocFinalPct],
+      ["readinessStatus", scenario.readinessPassport.status],
+      ["passportScore", scenario.readinessPassport.passportScore],
+      ["maxSafeEvSessions", scenario.readinessPassport.maxSafeEvSessions],
+      ["firstRiskEvSessions", scenario.readinessPassport.firstRiskEvSessions ?? ""],
+      ["evHeadroom", scenario.readinessPassport.evHeadroom],
+      ["recommendedTransformerKva", scenario.readinessPassport.recommendedTransformerKva],
+      ["storageBridgeKwh", scenario.readinessPassport.storageBridgeKwh],
+      ["readinessDecision", scenario.readinessPassport.decisionSummary],
       ...(gridSignal
         ? [
             ["gridProvider", gridSignal.provider],

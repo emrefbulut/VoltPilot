@@ -1,14 +1,43 @@
 # VoltPilot
 
-Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, telemetry validation, and engineering report generation.
+Pre-hardware grid-readiness cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, telemetry validation, and engineering report generation.
 
-VoltPilot is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
+![VoltPilot Readiness Passport](docs/assets/voltpilot-readiness-passport.svg)
+
+VoltPilot is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, solves the maximum safe EV concurrency before hardware purchase, and validates simulated dispatch against mock or measured telemetry samples.
 
 ## Why It Matters
 
 EV charging, cooling demand, and small distributed resources make local grid flexibility more valuable. Many small facilities do not have a practical way to estimate transformer stress, flexible-load potential, or whether a control strategy will create measurable value.
 
 VoltPilot demonstrates that workflow in software first. It works today without hardware, but its telemetry and public-data contracts can later be connected to ESP32, MQTT, smart-plug data, or live grid-data providers.
+
+## Core Differentiator
+
+Most energy tools focus on monitoring, general optimization, or operating installed EV chargers. VoltPilot focuses on the decision before hardware is purchased:
+
+> How many EV charging sessions can this facility support safely, where does transformer risk begin, and should the next move be a charging policy, a battery bridge, or a transformer upgrade?
+
+The answer is packaged as a **Readiness Passport**:
+
+- Max Safe EV Solver: estimates the largest EV concurrency that stays inside transformer kVA and overload limits.
+- First-risk threshold: shows the EV count where the facility leaves the safe pre-hardware envelope.
+- Storage bridge estimate: approximates the battery energy needed to hold the requested plan inside the managed stress band.
+- Transformer upgrade target: recommends the next standard kVA rating when the requested plan exceeds the envelope.
+- Control-mode envelope: compares uncontrolled, tariff-aware, orchestrated, and optimizer strategies on the same facility.
+- Exportable proof: JSON, CSV, Markdown report, and UI all use the same tested scenario model.
+
+```mermaid
+flowchart LR
+  A["Facility profile"] --> B["Max Safe EV Solver"]
+  B --> C["Readiness Passport"]
+  D["Battery mode"] --> B
+  E["Tariff and grid signal"] --> B
+  F["Telemetry CSV"] --> C
+  C --> G["Install as-is"]
+  C --> H["Managed charging policy"]
+  C --> I["Battery bridge or transformer upgrade"]
+```
 
 ## Completed Features
 
@@ -18,6 +47,8 @@ VoltPilot demonstrates that workflow in software first. It works today without h
 - URL-shareable scenarios and browser-local saved scenarios
 - 24-hour or 7-day load profile with uncontrolled baseline, mock/imported telemetry, and transformer limit
 - kW, kVA, current, power factor, overload-hour, battery SoC, cost, carbon, and engineering-confidence KPIs
+- Readiness Passport with max safe EV sessions, first-risk threshold, storage bridge estimate, and transformer upgrade target
+- EV capacity envelope across uncontrolled, tariff-aware, orchestrated, and optimizer strategies
 - Strategy comparison for uncontrolled, tariff-aware, orchestrated, and constraint-optimized operation
 - Lightweight optimizer for peak shaving, tariff exposure, battery SoC, and transformer headroom
 - `/api/grid-signal` virtual grid signal API
@@ -90,6 +121,12 @@ Scenario JSON:
 
 ```text
 /api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4
+```
+
+Readiness Passport stress case:
+
+```text
+/api/scenario?siteType=apartment&strategy=baseline&batteryMode=none&tariffPlan=critical&evCount=24&analysisDays=7
 ```
 
 7-day optimizer scenario:
@@ -166,7 +203,7 @@ EMBER_API_KEY=
 
 ## Suggested GitHub Description
 
-VoltPilot is an energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.
+Pre-hardware grid-readiness cockpit for EV charging, transformer risk, battery dispatch, virtual grid signals, and telemetry validation.
 
 ## Suggested Topics
 

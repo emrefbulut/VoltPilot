@@ -12,7 +12,7 @@ describe("VoltPilot simulation engine", () => {
   it("clamps EV sessions to the supported simulator range", () => {
     expect(clampFlexgridEvCount(-4)).toBe(0);
     expect(clampFlexgridEvCount(4.7)).toBe(5);
-    expect(clampFlexgridEvCount(99)).toBe(12);
+    expect(clampFlexgridEvCount(99)).toBe(24);
   });
 
   it("applies tariff windows consistently", () => {
@@ -79,5 +79,35 @@ describe("VoltPilot simulation engine", () => {
 
     expect(optimized.metrics.peakKw).toBeLessThan(uncontrolled.metrics.peakKw);
     expect(optimized.metrics.engineeringConfidence).toBeGreaterThanOrEqual(uncontrolled.metrics.engineeringConfidence);
+  });
+
+  it("builds a readiness passport with a safe EV envelope", () => {
+    const scenario = buildFlexgridScenario({
+      ...defaultFlexgridScenario,
+      strategy: "optimizer",
+      batteryMode: "medium",
+      evCount: 8,
+      analysisDays: 7
+    });
+
+    expect(scenario.readinessPassport.maxSafeEvSessions).toBeGreaterThanOrEqual(scenario.input.evCount);
+    expect(scenario.readinessPassport.passportScore).toBeGreaterThanOrEqual(20);
+    expect(scenario.readinessPassport.envelope).toHaveLength(4);
+    expect(scenario.readinessPassport.recommendedTransformerKva).toBeGreaterThanOrEqual(scenario.metrics.transformerLimitKva);
+  });
+
+  it("flags high EV concurrency as an upgrade decision when the envelope is exceeded", () => {
+    const scenario = buildFlexgridScenario({
+      siteType: "apartment",
+      strategy: "baseline",
+      batteryMode: "none",
+      tariffPlan: "critical",
+      evCount: 24,
+      analysisDays: 7
+    });
+
+    expect(scenario.readinessPassport.status).toBe("upgrade");
+    expect(scenario.readinessPassport.maxSafeEvSessions).toBeLessThan(scenario.input.evCount);
+    expect(scenario.readinessPassport.storageBridgeKwh).toBeGreaterThan(0);
   });
 });

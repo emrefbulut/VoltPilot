@@ -16,6 +16,8 @@ describe("VoltPilot API routes", () => {
     expect(response.status).toBe(200);
     expect(body.metrics.peakKva).toBeGreaterThan(0);
     expect(body.metrics.engineeringConfidence).toBeGreaterThan(0);
+    expect(body.readinessPassport.maxSafeEvSessions).toBeGreaterThanOrEqual(body.input.evCount);
+    expect(body.readinessPassport.decisionSummary).toContain("pre-hardware");
   });
 
   it("returns scenario JSON for a 7-day optimizer analysis", async () => {
@@ -37,6 +39,7 @@ describe("VoltPilot API routes", () => {
     expect(response.headers.get("Content-Type")).toContain("text/csv");
     expect(text).toContain("engineeringConfidence");
     expect(text).toContain("analysisDays");
+    expect(text).toContain("maxSafeEvSessions");
   });
 
   it("returns downloadable engineering report markdown", async () => {
@@ -48,6 +51,7 @@ describe("VoltPilot API routes", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/markdown");
     expect(text).toContain("VoltPilot Engineering Report");
+    expect(text).toContain("Readiness Passport");
     expect(text).toContain("Analysis horizon: 7 days");
   });
 

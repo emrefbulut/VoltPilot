@@ -11,6 +11,7 @@ Example endpoint:
 The report includes:
 
 - selected facility, strategy, tariff, EV count, battery mode, and analysis horizon
+- Readiness Passport with max safe EV sessions, first-risk threshold, storage bridge estimate, transformer upgrade target, and charger policy
 - peak `kW`, peak `kVA`, transformer stress, current, power factor, and overload hours
 - battery charge/discharge, SoC minimum/final, and efficiency-loss estimates
 - telemetry confidence, MAE, MAPE, peak error, and energy delta

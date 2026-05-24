@@ -48,6 +48,7 @@ import {
   buildFlexgridScenario,
   clampFlexgridEvCount,
   defaultFlexgridScenario,
+  FLEXGRID_MAX_EV_SESSIONS,
   flexgridAnalysisOptions,
   flexgridBatteryOptions,
   flexgridSiteProfiles,
@@ -56,6 +57,7 @@ import {
   type FlexgridAssetContribution,
   type FlexgridAnalysisDays,
   type FlexgridBatteryMode,
+  type FlexgridReadinessStatus,
   type FlexgridScenario,
   type FlexgridScenarioInput,
   type FlexgridSiteType,
@@ -239,6 +241,30 @@ function demandRiskLabel(risk: FlexgridGridSignal["points"][number]["demandRisk"
   }
 
   return "Low";
+}
+
+function readinessStatusLabel(status: FlexgridReadinessStatus) {
+  if (status === "ready") {
+    return "Ready";
+  }
+
+  if (status === "managed") {
+    return "Managed";
+  }
+
+  return "Upgrade";
+}
+
+function readinessStatusClass(status: FlexgridReadinessStatus) {
+  if (status === "ready") {
+    return "border-teal-200 bg-teal-50 text-teal-950";
+  }
+
+  if (status === "managed") {
+    return "border-amber-200 bg-amber-50 text-amber-950";
+  }
+
+  return "border-rose-200 bg-rose-50 text-rose-950";
 }
 
 function SegmentedSelector<T extends string>({
@@ -824,6 +850,117 @@ function DecisionPanel({
   );
 }
 
+function ReadinessPassportPanel({ scenario }: { scenario: FlexgridScenario }) {
+  const passport = scenario.readinessPassport;
+  const envelopeMax = Math.max(...passport.envelope.map((item) => item.maxSafeEvSessions), 1);
+  const statusClass = readinessStatusClass(passport.status);
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+      <div className="grid gap-px bg-slate-200 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <div className="relative overflow-hidden bg-[#071113] p-5 text-white md:p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.28),transparent_32%),radial-gradient(circle_at_82%_12%,rgba(245,158,11,0.18),transparent_30%)]" />
+          <div className="relative">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-teal-100">
+                <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                Readiness Passport
+              </span>
+              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClass}`}>
+                {readinessStatusLabel(passport.status)}
+              </span>
+            </div>
+            <div className="mt-7 grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Max safe EV sessions</p>
+                <p className="mt-2 text-7xl font-semibold leading-none tracking-tight text-teal-200">
+                  {passport.maxSafeEvSessions}
+                </p>
+                <p className="mt-3 text-sm font-medium text-white/55">
+                  {passport.evHeadroom > 0 ? `${passport.evHeadroom} session headroom` : "No spare EV headroom"}
+                </p>
+              </div>
+              <div>
+                <h3 className="max-w-2xl text-3xl font-semibold leading-tight tracking-normal md:text-4xl">
+                  Pre-hardware decision layer for EV rollout, storage, and transformer risk.
+                </h3>
+                <p className="mt-4 max-w-2xl text-sm leading-6 text-white/64">{passport.decisionSummary}</p>
+              </div>
+            </div>
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
+              {[
+                ["Passport score", `${passport.passportScore}/100`],
+                ["First risk", passport.firstRiskEvSessions ? `${passport.firstRiskEvSessions} EV` : "Not reached"],
+                ["Limiter", passport.limitingFactor]
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-white/10 bg-white/[0.06] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/42">{label}</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 md:p-6">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["Requested stress", formatPct(passport.stressAtRequestedPct)],
+              ["Next EV stress", formatPct(passport.nextEvStressPct)],
+              ["Upgrade target", formatNumber(passport.recommendedTransformerKva, " kVA")],
+              ["Storage bridge", formatNumber(passport.storageBridgeKwh, " kWh")]
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">{label}</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-950">EV capacity by control mode</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Same facility and tariff, solved for the maximum safe EV concurrency before hardware purchase.
+                </p>
+              </div>
+              <Gauge className="h-5 w-5 text-teal-700" aria-hidden="true" />
+            </div>
+            <div className="mt-4 space-y-3">
+              {passport.envelope.map((item) => (
+                <div key={item.strategy} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-semibold text-slate-700">{item.label}</span>
+                    <span className="font-semibold text-slate-950">{item.maxSafeEvSessions} EV</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-teal-600"
+                      style={{ width: `${Math.max(4, (item.maxSafeEvSessions / envelopeMax) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Charger policy</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{passport.chargerPolicy}</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Next step</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{passport.recommendedNextStep}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ScenarioLibrary({
   savedScenarios,
   onApplyScenario,
@@ -987,14 +1124,14 @@ function ControlPanel({
             className="mt-5 w-full accent-teal-400"
             type="range"
             min={0}
-            max={12}
+            max={FLEXGRID_MAX_EV_SESSIONS}
             step={1}
             value={evCount}
             onChange={(event) => startTransition(() => onEvCount(clampFlexgridEvCount(Number(event.target.value))))}
           />
           <div className="mt-2 flex justify-between text-xs text-white/45">
             <span>0</span>
-            <span>12</span>
+            <span>{FLEXGRID_MAX_EV_SESSIONS}</span>
           </div>
         </section>
       </div>
@@ -1521,6 +1658,8 @@ export function FlexgridSimulator() {
               />
             </div>
           </section>
+
+          <ReadinessPassportPanel scenario={scenario} />
 
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricTile

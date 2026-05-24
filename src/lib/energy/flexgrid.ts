@@ -4,6 +4,7 @@ export type FlexgridBatteryMode = "none" | "small" | "medium";
 export type FlexgridTariffPlan = "flat" | "tou" | "critical";
 export type FlexgridAnalysisDays = 1 | 7;
 export type RecommendationPriority = "high" | "medium" | "low";
+export type FlexgridReadinessStatus = "ready" | "managed" | "upgrade";
 
 export type FlexgridSiteProfile = {
   label: string;
@@ -117,6 +118,37 @@ export type FlexgridComparison = {
   engineeringConfidence: number;
 };
 
+export type FlexgridReadinessEnvelope = {
+  strategy: FlexgridStrategy;
+  label: string;
+  maxSafeEvSessions: number;
+  transformerStressAtRequested: number;
+  overloadHoursAtRequested: number;
+  monthlySavingsAtRequestedTl: number;
+};
+
+export type FlexgridReadinessPassport = {
+  status: FlexgridReadinessStatus;
+  maxSafeEvSessions: number;
+  requestedEvSessions: number;
+  evHeadroom: number;
+  firstRiskEvSessions: number | null;
+  safeEvUtilizationPct: number;
+  stressAtRequestedPct: number;
+  stressAtMaxSafePct: number;
+  nextEvStressPct: number;
+  overloadHoursAtRequested: number;
+  overloadHoursAtNextEv: number;
+  recommendedTransformerKva: number;
+  storageBridgeKwh: number;
+  passportScore: number;
+  limitingFactor: string;
+  chargerPolicy: string;
+  decisionSummary: string;
+  recommendedNextStep: string;
+  envelope: FlexgridReadinessEnvelope[];
+};
+
 export type FlexgridScenario = {
   input: FlexgridScenarioInput;
   site: FlexgridSiteProfile;
@@ -125,6 +157,7 @@ export type FlexgridScenario = {
   assets: FlexgridAssetContribution[];
   recommendations: FlexgridRecommendation[];
   comparison: FlexgridComparison[];
+  readinessPassport: FlexgridReadinessPassport;
   summary: string;
 };
 
@@ -283,6 +316,10 @@ export const defaultFlexgridScenario: FlexgridScenarioInput = {
 
 const BATTERY_CHARGE_EFFICIENCY = 0.92;
 const BATTERY_DISCHARGE_EFFICIENCY = 0.9;
+export const FLEXGRID_MAX_EV_SESSIONS = 24;
+const READINESS_TARGET_STRESS_PCT = 92;
+const READINESS_MANAGED_STRESS_PCT = 85;
+const STANDARD_TRANSFORMER_KVA = [50, 63, 70, 80, 100, 125, 160, 200, 250, 315, 400];
 
 function round(value: number, precision = 1) {
   const factor = 10 ** precision;
@@ -672,6 +709,167 @@ function buildComparison(input: FlexgridScenarioInput): FlexgridComparison[] {
   });
 }
 
+function evaluateScenarioMetrics(input: FlexgridScenarioInput, evCount: number, strategyOverride?: FlexgridStrategy) {
+  const nextInput = {
+    ...input,
+    evCount: clampFlexgridEvCount(evCount),
+    strategy: strategyOverride ?? input.strategy
+  };
+  const chart = buildChart(nextInput);
+  const metrics = buildMetrics(nextInput, chart);
+
+  return { chart, metrics };
+}
+
+function isSafeReadinessPoint(metrics: FlexgridScenarioMetrics) {
+  return metrics.overloadHours === 0 && metrics.transformerStress <= READINESS_TARGET_STRESS_PCT;
+}
+
+function transformerUpgradeTarget(peakKva: number, currentLimitKva: number) {
+  const targetKva = peakKva / (READINESS_MANAGED_STRESS_PCT / 100);
+
+  return STANDARD_TRANSFORMER_KVA.find((rating) => rating >= targetKva && rating >= currentLimitKva) ?? Math.ceil(targetKva / 25) * 25;
+}
+
+function storageBridgeEnergyKwh(chart: FlexgridScenarioPoint[], transformerLimitKva: number, powerFactor: number) {
+  const targetKva = transformerLimitKva * (READINESS_MANAGED_STRESS_PCT / 100);
+  const bridgeKwh = chart.reduce((total, point) => {
+    const excessKva = Math.max(0, point.totalKva - targetKva);
+
+    return total + excessKva * powerFactor;
+  }, 0);
+
+  return round(bridgeKwh);
+}
+
+function readinessStatusFor(metrics: FlexgridScenarioMetrics, requestedEvSessions: number, maxSafeEvSessions: number): FlexgridReadinessStatus {
+  if (metrics.overloadHours > 0 || requestedEvSessions > maxSafeEvSessions) {
+    return "upgrade";
+  }
+
+  if (metrics.transformerStress >= READINESS_MANAGED_STRESS_PCT || requestedEvSessions === maxSafeEvSessions) {
+    return "managed";
+  }
+
+  return "ready";
+}
+
+function limitingFactorFor(metrics: FlexgridScenarioMetrics) {
+  if (metrics.overloadHours > 0 || metrics.transformerStress >= READINESS_TARGET_STRESS_PCT) {
+    return "Transformer kVA headroom";
+  }
+
+  if (metrics.batterySocMinPct > 0 && metrics.batterySocMinPct <= 18) {
+    return "Battery state of charge";
+  }
+
+  if (metrics.engineeringConfidence < 70) {
+    return "Telemetry confidence";
+  }
+
+  return "EV concurrency";
+}
+
+function readinessCopyFor(status: FlexgridReadinessStatus, maxSafeEvSessions: number, requestedEvSessions: number) {
+  if (status === "ready") {
+    return {
+      chargerPolicy: "Proceed with the current EV count and keep telemetry validation active.",
+      recommendedNextStep: "Install or pilot the current plan, then compare measured CSV telemetry against the model.",
+      decisionSummary: `Current plan is inside the pre-hardware envelope: ${requestedEvSessions} EV sessions requested, ${maxSafeEvSessions} EV sessions estimated as safe.`
+    };
+  }
+
+  if (status === "managed") {
+    return {
+      chargerPolicy: "Use staggered charging, priority rules, and SoC-aware battery dispatch.",
+      recommendedNextStep: "Treat this as a managed rollout: publish charging rules before adding more EV sessions.",
+      decisionSummary: `Current plan is feasible but close to the operating envelope. Keep concurrency at or below ${maxSafeEvSessions} EV sessions.`
+    };
+  }
+
+  return {
+    chargerPolicy: "Cap EV charging at the safe limit until storage, control policy, or transformer capacity is upgraded.",
+    recommendedNextStep: "Do not deploy the requested concurrency as-is; compare battery support with a transformer upgrade.",
+    decisionSummary: `Requested concurrency exceeds the safe envelope. Use ${maxSafeEvSessions} EV sessions as the pre-hardware cap.`
+  };
+}
+
+function buildReadinessEnvelope(input: FlexgridScenarioInput): FlexgridReadinessEnvelope[] {
+  return flexgridStrategyOptions.map((option) => {
+    const safeEvSessions = Array.from({ length: FLEXGRID_MAX_EV_SESSIONS + 1 }, (_, evCount) => {
+      const { metrics } = evaluateScenarioMetrics(input, evCount, option.id);
+
+      return { evCount, metrics };
+    })
+      .filter((candidate) => isSafeReadinessPoint(candidate.metrics))
+      .at(-1);
+    const requested = evaluateScenarioMetrics(input, input.evCount, option.id);
+
+    return {
+      strategy: option.id,
+      label: option.label,
+      maxSafeEvSessions: safeEvSessions?.evCount ?? 0,
+      transformerStressAtRequested: requested.metrics.transformerStress,
+      overloadHoursAtRequested: requested.metrics.overloadHours,
+      monthlySavingsAtRequestedTl: requested.metrics.monthlySavingsTl
+    };
+  });
+}
+
+function buildReadinessPassport(input: FlexgridScenarioInput, metrics: FlexgridScenarioMetrics, chart: FlexgridScenarioPoint[]): FlexgridReadinessPassport {
+  const evaluated = Array.from({ length: FLEXGRID_MAX_EV_SESSIONS + 1 }, (_, evCount) => {
+    const result = evCount === input.evCount ? { chart, metrics } : evaluateScenarioMetrics(input, evCount);
+
+    return { evCount, ...result };
+  });
+  const safeCandidate = evaluated.filter((candidate) => isSafeReadinessPoint(candidate.metrics)).at(-1);
+  const maxSafeEvSessions = safeCandidate?.evCount ?? 0;
+  const requested = evaluated.find((candidate) => candidate.evCount === input.evCount) ?? evaluated[0]!;
+  const nextEv = evaluated.find((candidate) => candidate.evCount === Math.min(FLEXGRID_MAX_EV_SESSIONS, input.evCount + 1)) ?? requested;
+  const firstRiskEvSessions =
+    evaluated.find((candidate) => candidate.evCount > maxSafeEvSessions && !isSafeReadinessPoint(candidate.metrics))?.evCount ?? null;
+  const status = readinessStatusFor(requested.metrics, input.evCount, maxSafeEvSessions);
+  const copy = readinessCopyFor(status, maxSafeEvSessions, input.evCount);
+  const recommendedTransformerKva = transformerUpgradeTarget(requested.metrics.peakKva, requested.metrics.transformerLimitKva);
+  const storageBridgeKwh = storageBridgeEnergyKwh(requested.chart, requested.metrics.transformerLimitKva, requested.metrics.powerFactor);
+  const evHeadroom = Math.max(0, maxSafeEvSessions - input.evCount);
+  const safeEvUtilizationPct = maxSafeEvSessions > 0 ? Math.min(150, Math.round((input.evCount / maxSafeEvSessions) * 100)) : 100;
+  const passportScore = Math.min(
+    99,
+    Math.max(
+      20,
+      Math.round(
+        requested.metrics.engineeringConfidence -
+          Math.max(0, safeEvUtilizationPct - 80) * 0.35 -
+          requested.metrics.overloadHours * 4 +
+          evHeadroom * 1.5
+      )
+    )
+  );
+
+  return {
+    status,
+    maxSafeEvSessions,
+    requestedEvSessions: input.evCount,
+    evHeadroom,
+    firstRiskEvSessions,
+    safeEvUtilizationPct,
+    stressAtRequestedPct: requested.metrics.transformerStress,
+    stressAtMaxSafePct: safeCandidate?.metrics.transformerStress ?? 0,
+    nextEvStressPct: nextEv.metrics.transformerStress,
+    overloadHoursAtRequested: requested.metrics.overloadHours,
+    overloadHoursAtNextEv: nextEv.metrics.overloadHours,
+    recommendedTransformerKva,
+    storageBridgeKwh,
+    passportScore,
+    limitingFactor: limitingFactorFor(requested.metrics),
+    chargerPolicy: copy.chargerPolicy,
+    decisionSummary: copy.decisionSummary,
+    recommendedNextStep: copy.recommendedNextStep,
+    envelope: buildReadinessEnvelope(input)
+  };
+}
+
 function buildSummary(site: FlexgridSiteProfile, metrics: FlexgridScenarioMetrics) {
   const horizon = metrics.analysisDays === 1 ? "24-hour" : "7-day";
 
@@ -705,7 +903,7 @@ export function clampFlexgridEvCount(value: number) {
     return defaultFlexgridScenario.evCount;
   }
 
-  return Math.min(12, Math.max(0, Math.round(value)));
+  return Math.min(FLEXGRID_MAX_EV_SESSIONS, Math.max(0, Math.round(value)));
 }
 
 export function buildFlexgridScenario(input: FlexgridScenarioInput): FlexgridScenario;
@@ -741,6 +939,7 @@ export function buildFlexgridScenario(
   const site = flexgridSiteProfiles[input.siteType];
   const chart = buildChart(input);
   const metrics = buildMetrics(input, chart);
+  const readinessPassport = buildReadinessPassport(input, metrics, chart);
 
   return {
     input,
@@ -750,6 +949,7 @@ export function buildFlexgridScenario(
     assets: buildAssets(chart),
     recommendations: buildRecommendations(metrics, input),
     comparison: buildComparison(input),
+    readinessPassport,
     summary: buildSummary(site, metrics)
   };
 }

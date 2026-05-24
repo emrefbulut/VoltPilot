@@ -8,6 +8,9 @@ The current release is complete as a software-first, hybrid-ready project:
 - Reusable simulation engine
 - 24-hour and 7-day analysis horizons
 - Transformer kVA and current estimates
+- Readiness Passport with max safe EV sessions and first-risk threshold
+- Strategy-specific EV capacity envelope
+- Storage bridge and transformer upgrade estimates
 - Battery SoC and round-trip efficiency assumptions
 - Browser-local saved scenarios
 - Shareable scenario URLs
@@ -25,6 +28,7 @@ The current release is complete as a software-first, hybrid-ready project:
 ## v1.1 software proof
 
 - Add a README screenshot or short GIF
+- Add downloadable PDF version of the Readiness Passport
 - Add chart-image capture inside the engineering report
 - Fill `/api/grid-signal` provider adapters with live API credentials
 - Connect the grid signal more deeply to cost and carbon optimization
@@ -49,4 +53,4 @@ The current release is complete as a software-first, hybrid-ready project:
 
 ## CV line
 
-Built VoltPilot, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.
+Built VoltPilot, a pre-hardware grid-readiness cockpit that combines max-safe EV solving, transformer loading estimates, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.

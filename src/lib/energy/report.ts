@@ -47,6 +47,13 @@ function gridStatusLabel(status: FlexgridGridSignal["status"]) {
   return "Local data";
 }
 
+function readinessStatusLabel(status: FlexgridScenario["readinessPassport"]["status"]) {
+  if (status === "ready") return "Ready";
+  if (status === "managed") return "Managed rollout";
+
+  return "Upgrade required";
+}
+
 export function buildEngineeringReportMarkdown({
   scenario,
   telemetry,
@@ -104,6 +111,23 @@ export function buildEngineeringReportMarkdown({
     "## Executive Summary",
     "",
     scenario.summary,
+    "",
+    "## Readiness Passport",
+    "",
+    `- Decision status: ${readinessStatusLabel(scenario.readinessPassport.status)}`,
+    `- Passport score: ${scenario.readinessPassport.passportScore}/100`,
+    `- Max safe EV sessions: ${scenario.readinessPassport.maxSafeEvSessions}`,
+    `- Requested EV sessions: ${scenario.readinessPassport.requestedEvSessions}`,
+    `- EV headroom: ${scenario.readinessPassport.evHeadroom}`,
+    `- First risk EV session: ${scenario.readinessPassport.firstRiskEvSessions ?? "Not reached in evaluated range"}`,
+    `- Stress at requested plan: ${formatPct(scenario.readinessPassport.stressAtRequestedPct)}`,
+    `- Stress at max safe EV count: ${formatPct(scenario.readinessPassport.stressAtMaxSafePct)}`,
+    `- Next-EV stress estimate: ${formatPct(scenario.readinessPassport.nextEvStressPct)}`,
+    `- Recommended transformer rating: ${formatNumber(scenario.readinessPassport.recommendedTransformerKva, " kVA")}`,
+    `- Storage bridge estimate: ${formatNumber(scenario.readinessPassport.storageBridgeKwh, " kWh")}`,
+    `- Limiting factor: ${scenario.readinessPassport.limitingFactor}`,
+    `- Charger policy: ${scenario.readinessPassport.chargerPolicy}`,
+    `- Next step: ${scenario.readinessPassport.recommendedNextStep}`,
     "",
     "## Core Engineering Metrics",
     "",

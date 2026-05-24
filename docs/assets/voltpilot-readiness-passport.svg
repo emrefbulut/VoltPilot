@@ -1,0 +1,33 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="36" fill="#071113"/>
+  <circle cx="190" cy="120" r="210" fill="#14B8A6" fill-opacity="0.18"/>
+  <circle cx="1050" cy="80" r="240" fill="#F59E0B" fill-opacity="0.13"/>
+  <path d="M80 500 C210 360 330 380 455 450 C580 520 715 530 840 400 C945 292 1040 280 1120 330" stroke="#14B8A6" stroke-width="7" stroke-linecap="round"/>
+  <path d="M80 500 C210 360 330 380 455 450 C580 520 715 530 840 400 C945 292 1040 280 1120 330" stroke="white" stroke-opacity="0.16" stroke-width="2" stroke-dasharray="14 18"/>
+  <text x="72" y="92" fill="#E6FFFB" font-family="Arial, sans-serif" font-size="34" font-weight="700">VoltPilot</text>
+  <text x="72" y="134" fill="#94A3B8" font-family="Arial, sans-serif" font-size="18">Pre-hardware grid-readiness cockpit</text>
+  <rect x="72" y="188" width="326" height="246" rx="24" fill="white" fill-opacity="0.07" stroke="white" stroke-opacity="0.14"/>
+  <text x="104" y="238" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">MAX SAFE EV SESSIONS</text>
+  <text x="104" y="330" fill="#99F6E4" font-family="Arial, sans-serif" font-size="92" font-weight="700">8</text>
+  <text x="104" y="382" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="23" font-weight="700">Ready for rollout</text>
+  <text x="104" y="414" fill="#94A3B8" font-family="Arial, sans-serif" font-size="16">First risk starts at 9 EV sessions</text>
+  <rect x="438" y="188" width="308" height="246" rx="24" fill="white" fill-opacity="0.07" stroke="white" stroke-opacity="0.14"/>
+  <text x="470" y="238" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">PASSPORT OUTPUT</text>
+  <text x="470" y="288" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="22" font-weight="700">Transformer risk</text>
+  <rect x="470" y="310" width="210" height="12" rx="6" fill="#1E293B"/>
+  <rect x="470" y="310" width="154" height="12" rx="6" fill="#14B8A6"/>
+  <text x="470" y="362" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="22" font-weight="700">Storage bridge</text>
+  <text x="470" y="400" fill="#FDE68A" font-family="Arial, sans-serif" font-size="24" font-weight="700">12 kWh before upgrade</text>
+  <rect x="786" y="188" width="342" height="246" rx="24" fill="white" fill-opacity="0.07" stroke="white" stroke-opacity="0.14"/>
+  <text x="818" y="238" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">WHAT MAKES IT DIFFERENT</text>
+  <text x="818" y="288" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="22" font-weight="700">Before hardware purchase</text>
+  <text x="818" y="326" fill="#94A3B8" font-family="Arial, sans-serif" font-size="17">EV capacity, kVA risk, battery value,</text>
+  <text x="818" y="352" fill="#94A3B8" font-family="Arial, sans-serif" font-size="17">telemetry fit, and the next action in</text>
+  <text x="818" y="378" fill="#94A3B8" font-family="Arial, sans-serif" font-size="17">one exportable engineering passport.</text>
+  <rect x="72" y="500" width="1056" height="58" rx="29" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="112" y="536" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">Facility profile</text>
+  <text x="324" y="536" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">EV solver</text>
+  <text x="508" y="536" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">Battery dispatch</text>
+  <text x="750" y="536" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">Telemetry validation</text>
+  <text x="1010" y="536" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">Report</text>
+</svg>

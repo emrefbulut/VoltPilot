@@ -6,6 +6,14 @@
 curl "http://localhost:3000/api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4"
 ```
 
+The response includes `readinessPassport`, which contains `maxSafeEvSessions`, `firstRiskEvSessions`, `recommendedTransformerKva`, `storageBridgeKwh`, `decisionSummary`, and the strategy-specific EV capacity `envelope`.
+
+## Readiness Passport stress case
+
+```bash
+curl "http://localhost:3000/api/scenario?siteType=apartment&strategy=baseline&batteryMode=none&tariffPlan=critical&evCount=24&analysisDays=7"
+```
+
 ## Scenario CSV
 
 ```bash

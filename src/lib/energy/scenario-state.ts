@@ -1,6 +1,7 @@
 import {
   clampFlexgridEvCount,
   defaultFlexgridScenario,
+  FLEXGRID_MAX_EV_SESSIONS,
   isFlexgridBatteryMode,
   isFlexgridSiteType,
   isFlexgridStrategy,
@@ -123,7 +124,9 @@ export function parseScenarioInput(value: unknown):
   if (!strategy) errors.push("scenario.strategy must be baseline, tou, orchestrated, or optimizer");
   if (!batteryMode) errors.push("scenario.batteryMode must be none, small, or medium");
   if (!tariffPlan) errors.push("scenario.tariffPlan must be flat, tou, or critical");
-  if (!Number.isFinite(evCount) || evCount < 0 || evCount > 12) errors.push("scenario.evCount must be a number from 0 to 12");
+  if (!Number.isFinite(evCount) || evCount < 0 || evCount > FLEXGRID_MAX_EV_SESSIONS) {
+    errors.push(`scenario.evCount must be a number from 0 to ${FLEXGRID_MAX_EV_SESSIONS}`);
+  }
 
   if (errors.length > 0 || !siteType || !strategy || !batteryMode || !tariffPlan) {
     return { ok: false, errors };

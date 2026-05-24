@@ -26,6 +26,8 @@ The test suite covers:
 - transformer loading calculation
 - battery state-of-charge bounds
 - scenario engineering metrics
+- Readiness Passport max-safe EV envelope
+- high-concurrency upgrade decision behavior
 - telemetry sample validation
 - measured-vs-simulated comparison
 - virtual grid signal generation
@@ -39,6 +41,7 @@ The test suite covers:
 - Apparent power is estimated as `kVA = kW / powerFactor`.
 - Current is estimated with the three-phase current equation.
 - Battery behavior is a transparent dispatch heuristic, not an optimizer.
+- The Max Safe EV Solver uses the same scenario model and treats transformer overload hours plus a managed stress threshold as the pre-hardware safety boundary.
 - Telemetry confidence is a model-fit indicator, not a certified measurement score.
 
 ## Acceptance criteria
@@ -50,5 +53,6 @@ A release is considered healthy when:
 - ESLint has no errors
 - production build completes
 - `/api/scenario` returns JSON and CSV
+- `/api/scenario` includes a Readiness Passport in JSON and CSV output
 - `/api/grid-signal` returns 24 hourly points and rejects invalid providers
 - `/api/telemetry` returns 200 for valid payloads and 400 for invalid payloads
