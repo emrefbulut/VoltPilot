@@ -277,8 +277,8 @@ function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): Flexg
   if (metrics.status === "action") {
     recommendations.push({
       priority: "high",
-      title: "Investigate measured peak mismatch",
-      detail: "Measured load deviates materially from the simulation. Re-check EV session assumptions and transformer current readings before trusting dispatch decisions."
+      title: "Inspect the measured peak deviation",
+      detail: "Measured load diverges clearly from the model. Check EV session assumptions and transformer current readings before using the dispatch decision."
     });
   }
 
@@ -286,7 +286,7 @@ function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): Flexg
     recommendations.push({
       priority: "medium",
       title: "Calibrate the daily energy baseline",
-      detail: "Measured energy is higher than simulated energy. Update the facility base-load profile or add a measured channel for thermal loads."
+      detail: "Measured energy is higher than the model. Update the facility base-load profile or add a measured channel for thermal loads."
     });
   }
 
@@ -294,7 +294,7 @@ function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): Flexg
     recommendations.push({
       priority: "low",
       title: "Scenario is telemetry-ready",
-      detail: "Mock telemetry follows the simulated profile closely enough to replace one channel with ESP32 or smart-plug readings."
+      detail: "Demo telemetry closely follows the model profile. Use CSV comparison to track measured-versus-modeled channel fit in the report."
     });
   }
 
@@ -302,7 +302,7 @@ function buildTelemetryRecommendations(metrics: FlexgridTelemetryMetrics): Flexg
     recommendations.push({
       priority: "low",
       title: "Keep collecting samples",
-      detail: "The model is usable, but more measured points will improve confidence and reduce dispatch risk."
+      detail: "The model is usable. More measurement points improve the confidence score and reduce dispatch risk."
     });
   }
 

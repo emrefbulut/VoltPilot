@@ -1,4 +1,4 @@
-# FlexGrid-TR Roadmap
+# VoltPilot Roadmap
 
 ## Current release
 
@@ -49,4 +49,4 @@ The current release is complete as a software-first, hybrid-ready project:
 
 ## CV line
 
-Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.
+Built VoltPilot, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading estimates, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.

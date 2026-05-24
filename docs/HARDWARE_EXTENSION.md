@@ -1,6 +1,6 @@
 # Hardware Extension Path
 
-FlexGrid-TR does not require physical hardware in the current release. The project is intentionally hybrid-ready: a measured channel can replace mock telemetry without rewriting the simulation model or cockpit.
+VoltPilot does not require physical hardware in the current release. The project is intentionally hybrid-ready: a measured channel can replace mock telemetry without rewriting the simulation model or cockpit.
 
 ## Recommended first hardware path
 

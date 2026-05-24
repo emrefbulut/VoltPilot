@@ -1,6 +1,6 @@
-# FlexGrid-TR Architecture
+# VoltPilot Architecture
 
-FlexGrid-TR is a hybrid-ready software demonstrator. The current release does not require physical hardware, but the data boundaries are shaped so public grid signals and real telemetry channels can replace the deterministic demo data later.
+VoltPilot is a hybrid-ready software demonstrator. The current release does not require physical hardware, but the data boundaries are shaped so public grid signals and real telemetry channels can replace the deterministic demo data later.
 
 ```mermaid
 flowchart LR
@@ -68,4 +68,4 @@ Supported provider IDs:
 
 ## Storage decision
 
-Scenario persistence uses browser localStorage under `flexgrid-tr:v1:scenarios`. This avoids database setup while still giving the demo a product-like workflow. The backend stays stateless.
+Scenario persistence uses browser localStorage under `voltpilot:v1:scenarios`. This avoids database setup while still giving the demo a product-like workflow. The backend stays stateless.

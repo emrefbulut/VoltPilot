@@ -104,7 +104,7 @@ export async function GET(request: Request) {
     return new Response(buildCsv(["metric", "value", "extra_1", "extra_2", "extra_3", "extra_4", "extra_5", "extra_6", "extra_7", "extra_8", "extra_9", "extra_10", "extra_11", "extra_12", "extra_13", "extra_14", "extra_15"], rows), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="flexgrid-tr-${params.siteType}-${params.strategy}.csv"`
+        "Content-Disposition": `attachment; filename="voltpilot-${params.siteType}-${params.strategy}.csv"`
       }
     });
   }

@@ -1,6 +1,6 @@
 # Telemetry Guide
 
-FlexGrid-TR is hybrid-ready: the project works without hardware, but its telemetry API is designed so a future ESP32, MQTT bridge, or smart plug can send measured samples.
+VoltPilot is hybrid-ready: the project works without hardware, but its telemetry API is designed so a future ESP32, MQTT bridge, or smart plug can send measured samples.
 
 ## Endpoint
 

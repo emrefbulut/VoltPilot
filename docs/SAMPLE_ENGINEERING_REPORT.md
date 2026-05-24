@@ -1,6 +1,6 @@
 # Sample Engineering Report
 
-This repository can generate a scenario-specific Markdown engineering report from the cockpit or through `/api/report`.
+VoltPilot can generate a scenario-specific Markdown engineering report from the cockpit or through `/api/report`.
 
 Example endpoint:
 

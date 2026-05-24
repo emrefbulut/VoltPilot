@@ -9,7 +9,7 @@ import {
   type FlexgridScenarioInput
 } from "@/src/lib/energy/flexgrid";
 
-export const FLEXGRID_SCENARIO_STORAGE_KEY = "flexgrid-tr:v1:scenarios";
+export const FLEXGRID_SCENARIO_STORAGE_KEY = "voltpilot:v1:scenarios";
 
 export type SavedFlexgridScenario = {
   id: string;
@@ -28,8 +28,8 @@ export type FlexgridScenarioPreset = {
 export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   {
     id: "workshop-peak-shave",
-    label: "Workshop peak shave",
-    description: "Small industrial site with orchestrated EV and battery support.",
+    label: "Workshop peak shaving",
+    description: "Small industrial profile with orchestrated EV and battery support.",
     input: {
       siteType: "workshop",
       strategy: "orchestrated",
@@ -41,8 +41,8 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   },
   {
     id: "cafe-tou",
-    label: "Cafe TOU response",
-    description: "Commercial evening peak with tariff-aware shifting.",
+    label: "Cafe time-of-use response",
+    description: "Commercial profile with evening peak and tariff-aware load shifting.",
     input: {
       siteType: "cafe",
       strategy: "tou",
@@ -55,7 +55,7 @@ export const flexgridScenarioPresets: FlexgridScenarioPreset[] = [
   {
     id: "lab-telemetry",
     label: "Electronics lab telemetry",
-    description: "University lab profile prepared for measured vs simulated validation.",
+    description: "University lab prepared for measured-versus-simulated profile validation.",
     input: {
       siteType: "lab",
       strategy: "orchestrated",

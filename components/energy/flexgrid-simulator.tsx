@@ -20,7 +20,6 @@ import {
   BatteryCharging,
   BrainCircuit,
   CalendarDays,
-  CircuitBoard,
   DatabaseZap,
   Download,
   FileText,
@@ -43,6 +42,7 @@ import {
   Zap,
   type LucideIcon
 } from "lucide-react";
+import { VoltPilotLogo } from "@/components/brand/volt-pilot-logo";
 import { Button } from "@/components/ui/button";
 import {
   buildFlexgridScenario,
@@ -107,8 +107,8 @@ const batteryOptions: SelectorOption<FlexgridBatteryMode>[] = flexgridBatteryOpt
 
 const navItems = [
   { href: "#cockpit", label: "Cockpit" },
-  { href: "#architecture", label: "Architecture" },
-  { href: "#roadmap", label: "Roadmap" }
+  { href: "#architecture", label: "Scope" },
+  { href: "#reports", label: "Reporting" }
 ];
 
 const analysisOptions: SelectorOption<string>[] = flexgridAnalysisOptions.map((option) => ({
@@ -120,7 +120,7 @@ const analysisOptions: SelectorOption<string>[] = flexgridAnalysisOptions.map((o
 const gridProviderOptions: SelectorOption<FlexgridGridProvider>[] = flexgridGridProviders.map((provider) => ({
   id: provider.id,
   label: provider.label,
-  description: provider.requiresCredential ? "Ready for live API credentials" : "Keyless demo"
+  description: provider.requiresCredential ? "Source metadata registered" : "Keyless data"
 }));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -223,10 +223,10 @@ function gridStatusLabel(status: FlexgridGridSignal["status"]) {
   }
 
   if (status === "fallback") {
-    return "Virtual fallback";
+    return "Source model";
   }
 
-  return "Virtual demo";
+  return "Local data";
 }
 
 function demandRiskLabel(risk: FlexgridGridSignal["points"][number]["demandRisk"]) {
@@ -398,7 +398,7 @@ type EnergyTooltipPayload = {
 
 function formatTooltipValue(value: EnergyTooltipPayload["value"], unit = "") {
   if (typeof value === "number") {
-    return `${value.toLocaleString("tr-TR")}${unit ? ` ${unit}` : ""}`;
+    return `${value.toLocaleString("en-US")}${unit ? ` ${unit}` : ""}`;
   }
 
   if (typeof value === "string") {
@@ -481,12 +481,12 @@ function GridSignalPanel({
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
             <Globe2 className="h-3.5 w-3.5" aria-hidden="true" />
-            Virtual grid signal
+            Grid signal
           </div>
-          <h3 className="mt-3 text-2xl font-semibold text-slate-950">Official-data-ready decision layer without physical devices</h3>
+          <h3 className="mt-3 text-2xl font-semibold text-slate-950">Track market, load, and carbon signals on the same decision screen.</h3>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            The same data contract is kept for EPİAŞ, ENTSO-E, Electricity Maps, and Ember. If API keys are not
-            configured, the app uses a deterministic Turkey demo signal so the portfolio demo never breaks.
+            VoltPilot uses the same data contract for the selected provider; price, national load, carbon intensity, and
+            risk window stay readable next to the scenario.
           </p>
         </div>
 
@@ -525,7 +525,7 @@ function GridSignalPanel({
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         {[
           ["Status", gridStatusLabel(signal.status)],
-          ["National peak load", formatNumber(signal.summary.peakLoadMw, " MW")],
+          ["Peak national load", formatNumber(signal.summary.peakLoadMw, " MW")],
           ["Average price", formatNumber(signal.summary.averagePriceTlMwh, " TL/MWh")],
           ["Renewable share", formatPct(signal.summary.renewableSharePct)],
           ["Carbon intensity", formatNumber(signal.summary.carbonIntensityGco2Kwh, " gCO2/kWh")],
@@ -604,7 +604,7 @@ function GridSignalPanel({
             </div>
             <div className="mt-3 grid gap-2 text-xs">
               {[
-                ["Adapter", providerMeta.adapterStatus === "local" ? "Local deterministic" : "Credential-ready"],
+                ["Adapter", providerMeta.adapterStatus === "local" ? "Local deterministic" : "Source registered"],
                 ["Credential", providerMeta.credentialEnvName ?? "No key required"],
                 ["Refresh", providerMeta.refreshCadence],
                 ["Granularity", providerMeta.granularity]
@@ -621,7 +621,7 @@ function GridSignalPanel({
               target="_blank"
               rel="noreferrer"
             >
-              Open source documentation
+              Source documentation
             </a>
           </div>
           <div className={`rounded-lg border p-4 ${riskClass[highestRisk]}`}>
@@ -665,7 +665,7 @@ function GridSignalPanel({
 function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
   const stress = Math.min(100, Math.max(0, scenario.metrics.transformerStress));
   const flexibleShare = Math.min(100, Math.max(0, scenario.metrics.shiftedEnergyPct));
-  const dispatchState = scenario.metrics.overloadHours > 0 ? "Action required" : scenario.metrics.transformerStress >= 85 ? "Watch peak" : "Stable dispatch";
+  const dispatchState = scenario.metrics.overloadHours > 0 ? "Action required" : scenario.metrics.transformerStress >= 85 ? "Peak under watch" : "Balanced dispatch";
 
   return (
     <section className="relative overflow-hidden rounded-lg border border-slate-800 bg-[#081113] text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)]">
@@ -675,18 +675,17 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-teal-100">
             <RadioTower className="h-3.5 w-3.5" aria-hidden="true" />
-            Live simulation
+            Live scenario
           </div>
           <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.02] tracking-normal md:text-5xl">
-            FlexGrid-TR turns flexible load into a decision cockpit.
+            VoltPilot turns energy flexibility into an actionable decision.
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/70">
-            EV charging, storage, tariff pressure, transformer loading, and carbon impact stay connected to one
-            reusable scenario engine.
+            EV charging, storage, tariff pressure, transformer loading, and carbon impact are tracked together in one operating cockpit.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <StatusPill icon={Gauge} label="Peak event" value={formatNumber(scenario.metrics.peakEventReductionKw, " kW cut")} />
+            <StatusPill icon={Gauge} label="Peak event" value={formatNumber(scenario.metrics.peakEventReductionKw, " kW drop")} />
             <StatusPill icon={BatteryCharging} label="Storage" value={formatNumber(scenario.metrics.batteryDischargeKwh, " kWh/day")} />
             <StatusPill icon={ShieldAlert} label="Transformer" value={`${scenario.metrics.transformerStress}/100`} />
           </div>
@@ -705,7 +704,7 @@ function NetworkMap({ scenario }: { scenario: FlexgridScenario }) {
           <div className="absolute left-4 top-4 z-10 rounded-full border border-white/10 bg-[#081113]/80 px-3 py-1 text-xs font-semibold text-white/70">
             Dispatch route
           </div>
-          <svg className="h-full min-h-[12rem] w-full" viewBox="0 0 270 220" role="img" aria-label="FlexGrid energy flow map">
+          <svg className="h-full min-h-[12rem] w-full" viewBox="0 0 270 220" role="img" aria-label="VoltPilot energy flow map">
             <defs>
               <linearGradient id="flow" x1="0" x2="1" y1="0" y2="0">
                 <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.15" />
@@ -841,7 +840,7 @@ function ScenarioLibrary({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-950">Scenario library</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Presets and browser-local saved scenarios.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Ready presets and browser-saved records.</p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={onSaveScenario}>
           <Save className="h-4 w-4" aria-hidden="true" />
@@ -977,7 +976,7 @@ function ControlPanel({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Concurrent EV sessions</p>
-              <p className="mt-1 text-sm text-white/55">Charging density increases coordination value.</p>
+              <p className="mt-1 text-sm text-white/55">Charging intensity raises the coordination value.</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-400 text-xl font-semibold text-slate-950">
               {evCount}
@@ -1101,7 +1100,7 @@ function Recommendations({ scenario }: { scenario: FlexgridScenario }) {
     <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-teal-700" aria-hidden="true" />
-        <p className="text-sm font-semibold text-slate-950">Recommended next actions</p>
+        <p className="text-sm font-semibold text-slate-950">Recommended actions</p>
       </div>
       <div className="mt-4 space-y-4">
         {scenario.recommendations.map((item) => (
@@ -1148,8 +1147,8 @@ function TelemetryValidation({
         </div>
         <p className="mt-4 text-5xl font-semibold leading-none">{comparison.metrics.confidenceScore}/100</p>
         <p className="mt-4 max-w-2xl text-sm leading-6 opacity-75">
-          {modeLabel} samples are compared with the simulated dispatch profile. A future ESP32, smart-plug export, or
-          CSV measurement file can use the same API contract.
+          {modeLabel} samples are compared with the simulated dispatch profile. CSV measurement files are validated
+          through the same API contract.
         </p>
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] opacity-60">Current source: {modeLabel}</p>
       </section>
@@ -1164,7 +1163,7 @@ function TelemetryValidation({
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={onResetTelemetry}>
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Mock
+              Reset
             </Button>
           </div>
         </div>
@@ -1234,7 +1233,7 @@ function EngineeringReport({
         <div>
           <p className="text-sm font-semibold text-slate-950">Engineering report summary</p>
           <p className="mt-1 text-sm text-slate-500">
-            Electrical quantities are estimated from the facility power factor and 400 V three-phase service assumptions.
+            Electrical values are estimated from facility power factor and a 400 V three-phase service assumption.
           </p>
         </div>
         <Button type="button" variant="outline" onClick={onDownloadReport}>
@@ -1266,7 +1265,7 @@ export function FlexgridSimulator() {
   const [savedScenarios, setSavedScenarios] = useState<SavedFlexgridScenario[]>([]);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [importedTelemetrySamples, setImportedTelemetrySamples] = useState<FlexgridTelemetrySample[] | null>(null);
-  const [telemetryImportStatus, setTelemetryImportStatus] = useState("Using deterministic mock telemetry. Import a CSV to compare measured data.");
+  const [telemetryImportStatus, setTelemetryImportStatus] = useState("Using deterministic demo telemetry. Import CSV to compare measured data.");
   const liveInput = useMemo(
     () => ({
       siteType,
@@ -1405,7 +1404,7 @@ export function FlexgridSimulator() {
 
       setImportedTelemetrySamples(parsed.samples);
       setTelemetryImportStatus(
-        `Imported ${parsed.samples.length} measured sample(s) from ${file.name}.${parsed.warnings.length > 0 ? ` ${parsed.warnings.join(" ")}` : ""}`
+        `Imported ${parsed.samples.length} measurement samples from ${file.name}.${parsed.warnings.length > 0 ? ` ${parsed.warnings.join(" ")}` : ""}`
       );
     } catch {
       setTelemetryImportStatus("CSV import failed: the selected file could not be read.");
@@ -1414,12 +1413,12 @@ export function FlexgridSimulator() {
 
   function resetTelemetryToMock() {
     setImportedTelemetrySamples(null);
-    setTelemetryImportStatus("Using deterministic mock telemetry. Import a CSV to compare measured data.");
+    setTelemetryImportStatus("Using deterministic demo telemetry. Import CSV to compare measured data.");
   }
 
   function downloadTelemetryTemplate() {
     downloadTextFile(
-      `flexgrid-tr-telemetry-template-${scenario.metrics.analysisDays}d.csv`,
+      `voltpilot-telemetry-template-${scenario.metrics.analysisDays}d.csv`,
       buildTelemetryCsvTemplate(mockTelemetrySamples),
       "text/csv;charset=utf-8"
     );
@@ -1433,7 +1432,7 @@ export function FlexgridSimulator() {
     });
 
     downloadTextFile(
-      `flexgrid-tr-${scenario.input.siteType}-${scenario.input.strategy}-report.md`,
+      `voltpilot-${scenario.input.siteType}-${scenario.input.strategy}-report.md`,
       report,
       "text/markdown;charset=utf-8"
     );
@@ -1443,14 +1442,8 @@ export function FlexgridSimulator() {
     <div id="cockpit" className="energy-grid min-h-screen text-slate-950">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081113]/95 px-4 py-3 text-white backdrop-blur md:px-6">
         <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-4">
-          <a href="#cockpit" className="flex items-center gap-3" aria-label="FlexGrid-TR cockpit">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-400 text-slate-950">
-              <CircuitBoard className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold leading-4">FlexGrid-TR</span>
-              <span className="block text-xs text-white/45">Hybrid-ready cockpit</span>
-            </span>
+          <a href="#cockpit" className="flex items-center gap-3" aria-label="VoltPilot cockpit">
+            <VoltPilotLogo subtitle="Energy decision cockpit" />
           </a>
           <nav className="hidden items-center gap-5 text-sm font-medium text-white/65 md:flex" aria-label="Primary navigation">
             {navItems.map((item) => (
@@ -1521,9 +1514,9 @@ export function FlexgridSimulator() {
               <DecisionPanel scenario={scenario} exportHref={exportHref} jsonHref={jsonHref} reportHref={reportHref} />
               <MetricTile
                 icon={BrainCircuit}
-                label="Best simulated strategy"
+                label="Strongest strategy"
                 value={bestStrategy.label}
-                helper={`${formatTl(bestStrategy.monthlySavingsTl)} monthly savings at ${bestStrategy.peakKw} kW peak`}
+                helper={`${formatTl(bestStrategy.monthlySavingsTl)} monthly savings, ${bestStrategy.peakKw} kW peak`}
                 tone="dark"
               />
             </div>
@@ -1576,15 +1569,15 @@ export function FlexgridSimulator() {
                     {scenario.metrics.analysisDays === 1 ? "24-hour" : "7-day"} load profile
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Selected scenario against uncontrolled operation, mock telemetry, and transformer limit.
+                    Selected scenario is shown with uncontrolled operation, demo telemetry, and transformer limit.
                 </p>
               </div>
               <div className="space-y-2 md:text-right">
-                <p className="text-sm font-semibold text-teal-700">Best simulated strategy: {bestStrategy.label}</p>
+                <p className="text-sm font-semibold text-teal-700">Strongest strategy: {bestStrategy.label}</p>
                 <ChartLegend
                   items={[
                     { label: "Selected", color: "#0f766e" },
-                    { label: "Mock telemetry", color: "#f59e0b" },
+                    { label: "Demo telemetry", color: "#f59e0b" },
                     { label: "Uncontrolled", color: "#64748b", dashed: true }
                   ]}
                 />
@@ -1639,7 +1632,7 @@ export function FlexgridSimulator() {
                     stroke="#f59e0b"
                     strokeWidth={2}
                     dot={false}
-                    name="Mock telemetry"
+                    name="Demo telemetry"
                     isAnimationActive={false}
                   />
                 </AreaChart>
@@ -1649,7 +1642,7 @@ export function FlexgridSimulator() {
 
           <TelemetryValidation
             comparison={telemetryComparison}
-            modeLabel={importedTelemetrySamples ? "Imported CSV telemetry" : "Mock telemetry"}
+            modeLabel={importedTelemetrySamples ? "CSV telemetry" : "Demo telemetry"}
             importStatus={telemetryImportStatus}
             onTelemetryCsv={handleTelemetryCsv}
             onResetTelemetry={resetTelemetryToMock}
@@ -1662,7 +1655,7 @@ export function FlexgridSimulator() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-slate-950">Load composition at peak</p>
-                  <p className="mt-1 text-sm text-slate-500">Peak hour contribution by asset class.</p>
+                  <p className="mt-1 text-sm text-slate-500">Peak-hour contribution by asset class.</p>
                 </div>
                 <Zap className="h-5 w-5 text-amber-600" aria-hidden="true" />
               </div>
@@ -1682,7 +1675,7 @@ export function FlexgridSimulator() {
             <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
               <p className="text-sm font-semibold text-slate-950">Peak asset share</p>
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                The controllable part is where the project creates engineering value.
+                The controllable share creates the engineering value.
               </p>
               <div className="mt-5 space-y-4">
                 {scenario.assets.map((asset) => (
@@ -1702,7 +1695,7 @@ export function FlexgridSimulator() {
               icon={Zap}
               label="Flexible load share"
               value={formatPct(scenario.metrics.shiftedEnergyPct)}
-              helper="Share that can be shifted or controlled"
+              helper="Shiftable or controllable share"
             />
             <MetricTile
               icon={BatteryCharging}
@@ -1715,7 +1708,7 @@ export function FlexgridSimulator() {
               icon={PlugZap}
               label="EV energy"
               value={formatNumber(scenario.metrics.evEnergyKwh, " kWh")}
-              helper="Charging energy represented in the selected horizon"
+              helper="Charging energy represented in the selected analysis"
             />
             <MetricTile
               icon={CalendarDays}

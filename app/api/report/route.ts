@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   return new Response(report, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      "Content-Disposition": `attachment; filename="flexgrid-tr-${params.siteType}-${params.strategy}-report.md"`
+      "Content-Disposition": `attachment; filename="voltpilot-${params.siteType}-${params.strategy}-report.md"`
     }
   });
 }

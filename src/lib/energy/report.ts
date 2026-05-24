@@ -1,5 +1,10 @@
 import type { FlexgridGridSignal } from "@/src/lib/energy/grid-signal";
-import type { FlexgridScenario } from "@/src/lib/energy/flexgrid";
+import {
+  flexgridBatteryOptions,
+  flexgridStrategyOptions,
+  flexgridTariffOptions,
+  type FlexgridScenario
+} from "@/src/lib/energy/flexgrid";
 import type { FlexgridTelemetryComparison } from "@/src/lib/energy/telemetry";
 
 function formatNumber(value: number, suffix = "") {
@@ -14,8 +19,32 @@ function formatPct(value: number) {
   return `${value.toLocaleString("en-US")}%`;
 }
 
+function labelFor<T extends string>(options: Array<{ id: T; label: string }>, id: T) {
+  return options.find((option) => option.id === id)?.label ?? id;
+}
+
 function priorityLabel(priority: string) {
-  return priority.toUpperCase();
+  if (priority === "high") return "High";
+  if (priority === "medium") return "Medium";
+  if (priority === "low") return "Low";
+
+  return priority;
+}
+
+function telemetryStatusLabel(status: string) {
+  if (status === "excellent") return "Excellent";
+  if (status === "good") return "Good";
+  if (status === "watch") return "Watch";
+  if (status === "action") return "Action";
+
+  return status;
+}
+
+function gridStatusLabel(status: FlexgridGridSignal["status"]) {
+  if (status === "live") return "Live";
+  if (status === "fallback") return "Source model";
+
+  return "Local data";
 }
 
 export function buildEngineeringReportMarkdown({
@@ -35,7 +64,7 @@ export function buildEngineeringReportMarkdown({
         "## Telemetry Validation",
         "",
         `- Sample count: ${telemetry.metrics.sampleCount}`,
-        `- Confidence score: ${telemetry.metrics.confidenceScore}/100 (${telemetry.metrics.status})`,
+        `- Confidence score: ${telemetry.metrics.confidenceScore}/100 (${telemetryStatusLabel(telemetry.metrics.status)})`,
         `- MAE: ${formatNumber(telemetry.metrics.maeKw, " kW")}`,
         `- MAPE: ${formatPct(telemetry.metrics.mapePct)}`,
         `- Peak error: ${formatNumber(telemetry.metrics.peakErrorKw, " kW")}`,
@@ -48,7 +77,7 @@ export function buildEngineeringReportMarkdown({
         "## Grid Signal",
         "",
         `- Provider: ${gridSignal.sourceLabel}`,
-        `- Status: ${gridSignal.status}`,
+        `- Status: ${gridStatusLabel(gridSignal.status)}`,
         `- Date: ${gridSignal.date}`,
         `- Peak national load: ${formatNumber(gridSignal.summary.peakLoadMw, " MW")} at ${gridSignal.summary.peakHour}`,
         `- Average price: ${formatNumber(gridSignal.summary.averagePriceTlMwh, " TL/MWh")}`,
@@ -59,16 +88,16 @@ export function buildEngineeringReportMarkdown({
     : "";
 
   return [
-    "# FlexGrid-TR Engineering Report",
+    "# VoltPilot Engineering Report",
     "",
     `Generated at: ${generatedAt}`,
     "",
     "## Scenario",
     "",
     `- Facility: ${scenario.site.label}`,
-    `- Strategy: ${scenario.input.strategy}`,
-    `- Battery mode: ${scenario.input.batteryMode}`,
-    `- Tariff plan: ${scenario.input.tariffPlan}`,
+    `- Strategy: ${labelFor(flexgridStrategyOptions, scenario.input.strategy)}`,
+    `- Battery mode: ${labelFor(flexgridBatteryOptions, scenario.input.batteryMode)}`,
+    `- Tariff: ${labelFor(flexgridTariffOptions, scenario.input.tariffPlan)}`,
     `- Concurrent EV sessions: ${scenario.input.evCount}`,
     `- Analysis horizon: ${horizon}`,
     "",
@@ -76,7 +105,7 @@ export function buildEngineeringReportMarkdown({
     "",
     scenario.summary,
     "",
-    "## Key Engineering Metrics",
+    "## Core Engineering Metrics",
     "",
     `- Peak demand: ${formatNumber(scenario.metrics.peakKw, " kW")}`,
     `- Peak apparent power: ${formatNumber(scenario.metrics.peakKva, " kVA")}`,
@@ -84,12 +113,12 @@ export function buildEngineeringReportMarkdown({
     `- Transformer stress: ${scenario.metrics.transformerStress}/100`,
     `- Maximum current: ${formatNumber(scenario.metrics.maxCurrentA, " A")}`,
     `- Power factor: ${scenario.metrics.powerFactor.toFixed(2)}`,
-    `- Overload hours: ${formatNumber(scenario.metrics.overloadHours, " h")}`,
-    `- Peak event reduction: ${formatNumber(scenario.metrics.peakEventReductionKw, " kW")} (${formatPct(scenario.metrics.peakReductionPct)})`,
+    `- Overload hours: ${formatNumber(scenario.metrics.overloadHours, " hours")}`,
+    `- Peak reduction: ${formatNumber(scenario.metrics.peakEventReductionKw, " kW")} (${formatPct(scenario.metrics.peakReductionPct)})`,
     `- Analysis energy: ${formatNumber(scenario.metrics.analysisEnergyKwh, " kWh")}`,
     `- Average daily energy: ${formatNumber(scenario.metrics.dailyEnergyKwh, " kWh/day")}`,
     `- Analysis cost: ${formatTl(scenario.metrics.analysisCostTl)}`,
-    `- Projected monthly savings: ${formatTl(scenario.metrics.monthlySavingsTl)}`,
+    `- Monthly savings projection: ${formatTl(scenario.metrics.monthlySavingsTl)}`,
     `- Daily carbon impact: ${formatNumber(scenario.metrics.carbonKgDaily, " kgCO2/day")}`,
     `- Engineering confidence: ${scenario.metrics.engineeringConfidence}/100`,
     "",
@@ -99,20 +128,22 @@ export function buildEngineeringReportMarkdown({
     `- Battery discharge: ${formatNumber(scenario.metrics.batteryDischargeKwh, " kWh")}`,
     `- Battery efficiency loss: ${formatNumber(scenario.metrics.batteryEfficiencyLossKwh, " kWh")}`,
     `- Battery SoC minimum/final: ${scenario.metrics.batterySocMinPct}% / ${scenario.metrics.batterySocFinalPct}%`,
-    `- EV energy represented: ${formatNumber(scenario.metrics.evEnergyKwh, " kWh")}`,
+    `- Represented EV energy: ${formatNumber(scenario.metrics.evEnergyKwh, " kWh")}`,
     "",
     gridSection,
     telemetrySection,
     "## Recommendations",
     "",
-    ...scenario.recommendations.map((recommendation) => `- ${priorityLabel(recommendation.priority)}: ${recommendation.title} - ${recommendation.detail}`),
+    ...scenario.recommendations.map(
+      (recommendation) => `- ${priorityLabel(recommendation.priority)}: ${recommendation.title} - ${recommendation.detail}`
+    ),
     "",
-    "## Model Boundaries",
+    "## Model Limits",
     "",
-    "- This is not a power-flow solver.",
-    "- kVA and current are estimated from site-level power factor and nominal service voltage.",
-    "- Virtual grid data is deterministic unless a live provider adapter is configured.",
-    "- Telemetry confidence improves when measured samples replace mock samples.",
+    "- This report is not a power-flow solver.",
+    "- kVA and current values are estimated from facility power factor and nominal service voltage.",
+    "- The grid signal is produced from the selected data provider's daily profile.",
+    "- Telemetry confidence is calculated from measured sample count and model fit.",
     ""
   ].join("\n");
 }

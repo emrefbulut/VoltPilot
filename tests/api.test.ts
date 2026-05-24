@@ -6,7 +6,7 @@ import { POST as postTelemetry } from "@/app/api/telemetry/route";
 import { defaultFlexgridScenario } from "@/src/lib/energy/flexgrid";
 import { generateMockTelemetrySamples } from "@/src/lib/energy/telemetry";
 
-describe("FlexGrid API routes", () => {
+describe("VoltPilot API routes", () => {
   it("returns scenario JSON with engineering metrics", async () => {
     const response = await getScenario(
       new Request("http://localhost/api/scenario?siteType=workshop&strategy=orchestrated&batteryMode=small&tariffPlan=tou&evCount=4")
@@ -47,7 +47,7 @@ describe("FlexGrid API routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/markdown");
-    expect(text).toContain("FlexGrid-TR Engineering Report");
+    expect(text).toContain("VoltPilot Engineering Report");
     expect(text).toContain("Analysis horizon: 7 days");
   });
 

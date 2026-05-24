@@ -1,14 +1,14 @@
-# FlexGrid-TR
+# VoltPilot
 
 Hybrid-ready energy flexibility cockpit for EV charging, flexible building loads, transformer loading, virtual grid signals, telemetry validation, and engineering report generation.
 
-FlexGrid-TR is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
+VoltPilot is a software-first electrical and electronics engineering portfolio project. It runs without physical hardware, models small-facility scenarios, simulates flexible-load orchestration, estimates transformer loading, compares control strategies, and validates simulated dispatch against mock or measured telemetry samples.
 
 ## Why It Matters
 
 EV charging, cooling demand, and small distributed resources make local grid flexibility more valuable. Many small facilities do not have a practical way to estimate transformer stress, flexible-load potential, or whether a control strategy will create measurable value.
 
-FlexGrid-TR demonstrates that workflow in software first. It works today without hardware, but its telemetry and public-data contracts can later be connected to ESP32, MQTT, smart-plug data, or live grid-data providers.
+VoltPilot demonstrates that workflow in software first. It works today without hardware, but its telemetry and public-data contracts can later be connected to ESP32, MQTT, smart-plug data, or live grid-data providers.
 
 ## Completed Features
 
@@ -44,7 +44,7 @@ Sources: [EPİAŞ technical documentation](https://seffaflik-prp.epias.com.tr/el
 
 ## Data Refresh Notes
 
-FlexGrid-TR does not currently poll live external APIs. The default grid signal is deterministic virtual data generated for the requested date, so every run is reproducible and CI-safe.
+VoltPilot does not currently poll live external APIs. The default grid signal is deterministic virtual data generated for the requested date, so every run is reproducible and CI-safe.
 
 When live adapters are implemented, refresh behavior should be provider- and dataset-specific:
 
@@ -166,7 +166,7 @@ EMBER_API_KEY=
 
 ## Suggested GitHub Description
 
-Energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.
+VoltPilot is an energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.
 
 ## Suggested Topics
 

@@ -1,6 +1,6 @@
 # Validation Notes
 
-FlexGrid-TR is validated with automated tests and deterministic simulation outputs. The project does not claim to be a grid power-flow solver; it is a transparent engineering demonstrator for scenario analysis and telemetry readiness.
+VoltPilot is validated with automated tests and deterministic simulation outputs. The project does not claim to be a grid power-flow solver; it is a transparent engineering demonstrator for scenario analysis and telemetry readiness.
 
 ## Automated checks
 

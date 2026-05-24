@@ -1,8 +1,8 @@
-# FlexGrid-TR Project Brief
+# VoltPilot Project Brief
 
 ## Short Description
 
-FlexGrid-TR is a hybrid-ready energy flexibility cockpit that analyzes EV charging, flexible building loads, battery support, virtual grid signals, and transformer loading in one workflow.
+VoltPilot is a hybrid-ready energy flexibility cockpit that analyzes EV charging, flexible building loads, battery support, virtual grid signals, and transformer loading in one workflow.
 
 The project runs without physical hardware. It still includes an EPİAŞ/ENTSO-E/Electricity Maps/Ember-ready virtual data layer, telemetry CSV import, a `POST /api/telemetry` endpoint for measured-vs-simulated comparison, and downloadable engineering report output. Future ESP32, MQTT bridge, or smart-plug data can be connected to the same contract.
 
@@ -18,7 +18,7 @@ Small businesses, labs, and apartment blocks often cannot quickly answer:
 
 ## Solution
 
-FlexGrid-TR answers those questions in one cockpit:
+VoltPilot answers those questions in one cockpit:
 
 - Builds 24-hour or 7-day load profiles.
 - Compares uncontrolled, tariff-aware, orchestrated, and constraint-optimized strategies.
@@ -29,7 +29,7 @@ FlexGrid-TR answers those questions in one cockpit:
 
 ## CV Line
 
-Built FlexGrid-TR, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.
+Built VoltPilot, a hybrid-ready energy flexibility cockpit that combines EV charging scenarios, transformer loading, battery SoC modeling, 7-day optimization, virtual grid signals, telemetry CSV validation, engineering report exports, API contracts, and automated tests in one Next.js/TypeScript project.
 
 ## Presentation Highlights
 

@@ -47,17 +47,17 @@ export const flexgridGridProviders: Array<{
   credentialEnvName: string | null;
   refreshCadence: string;
   granularity: string;
-  adapterStatus: "local" | "planned";
+  adapterStatus: "local" | "source";
 }> = [
   {
     id: "demo",
     label: "Virtual Demo",
     description: "Keyless deterministic 24-hour grid signal for Turkey.",
-    sourceUrl: "local://flexgrid-tr/demo-grid-signal",
+    sourceUrl: "local://voltpilot/demo-grid-signal",
     requiresCredential: false,
     credentialEnvName: null,
     refreshCadence: "Generated on every request for the selected date",
-    granularity: "Hourly, deterministic 24-point profile",
+    granularity: "Hourly deterministic 24-point profile",
     adapterStatus: "local"
   },
   {
@@ -69,7 +69,7 @@ export const flexgridGridProviders: Array<{
     credentialEnvName: "EPIAS_TGT",
     refreshCadence: "Dataset-specific according to EPİAŞ market and transparency publication processes",
     granularity: "Usually hourly or market-period based, depending on endpoint",
-    adapterStatus: "planned"
+    adapterStatus: "source"
   },
   {
     id: "entsoe",
@@ -80,7 +80,7 @@ export const flexgridGridProviders: Array<{
     credentialEnvName: "ENTSOE_TOKEN",
     refreshCadence: "Dataset-specific publication timing by transparency data item",
     granularity: "MTU-dependent, commonly 15, 30, or 60 minute electricity-market periods",
-    adapterStatus: "planned"
+    adapterStatus: "source"
   },
   {
     id: "electricity-maps",
@@ -89,9 +89,9 @@ export const flexgridGridProviders: Array<{
     sourceUrl: "https://portal.electricitymaps.com/docs/api",
     requiresCredential: true,
     credentialEnvName: "ELECTRICITY_MAPS_TOKEN",
-    refreshCadence: "API endpoint specific; dashboard should poll latest signals on a configurable interval",
+    refreshCadence: "API endpoint specific; the dashboard can poll latest signals on a configurable interval",
     granularity: "Hourly by default, with 5-minute and 15-minute granularities where available",
-    adapterStatus: "planned"
+    adapterStatus: "source"
   },
   {
     id: "ember",
@@ -102,7 +102,7 @@ export const flexgridGridProviders: Array<{
     credentialEnvName: "EMBER_API_KEY",
     refreshCadence: "Monthly Electricity Data is updated twice per month",
     granularity: "Monthly and yearly country-level electricity datasets",
-    adapterStatus: "planned"
+    adapterStatus: "source"
   }
 ];
 

@@ -1,6 +1,6 @@
 # Virtual Grid Data Guide
 
-FlexGrid-TR follows a "virtual first, official-data-ready later" data strategy. This keeps the project runnable without hardware while preserving a credible path toward live institutional data.
+VoltPilot follows a "virtual first, official-data-ready later" data strategy. This keeps the project runnable without hardware while preserving a credible path toward live institutional data.
 
 ## Why Start Virtually?
 
@@ -65,7 +65,7 @@ Live adapter refresh should be configured per provider and per dataset:
 
 ## Limitations
 
-These data sources are not building-meter measurements. They provide national, regional, or market-level signals. FlexGrid-TR connects those signals to a facility simulation to answer:
+These data sources are not building-meter measurements. They provide national, regional, or market-level signals. VoltPilot connects those signals to a facility simulation to answer:
 
 "Without hardware today, which hours are risky, which control strategy is safer, and which scenario is worth validating with future measurements?"
 

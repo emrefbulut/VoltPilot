@@ -8,7 +8,7 @@ import {
   validateTelemetrySamples
 } from "@/src/lib/energy/telemetry";
 
-describe("FlexGrid telemetry comparison", () => {
+describe("VoltPilot telemetry comparison", () => {
   it("generates a full-day mock telemetry feed", () => {
     const samples = generateMockTelemetrySamples(defaultFlexgridScenario);
 

@@ -8,7 +8,7 @@ import {
   getFlexgridTariffForHour
 } from "@/src/lib/energy/flexgrid";
 
-describe("FlexGrid simulation engine", () => {
+describe("VoltPilot simulation engine", () => {
   it("clamps EV sessions to the supported simulator range", () => {
     expect(clampFlexgridEvCount(-4)).toBe(0);
     expect(clampFlexgridEvCount(4.7)).toBe(5);

@@ -146,7 +146,7 @@ export const flexgridSiteProfiles: Record<FlexgridSiteType, FlexgridSiteProfile>
     hourlyShape: [0.48, 0.46, 0.45, 0.45, 0.47, 0.5, 0.58, 0.66, 0.71, 0.73, 0.75, 0.77, 0.79, 0.81, 0.84, 0.89, 0.97, 1.04, 1.18, 1.28, 1.34, 1.27, 1.05, 0.76]
   },
   workshop: {
-    label: "Small manufacturing workshop",
+    label: "Small production workshop",
     shortLabel: "Workshop",
     baseLoadKw: 18,
     dailyKwh: 312,
@@ -203,7 +203,7 @@ export const flexgridStrategyOptions: Array<{
   {
     id: "baseline",
     label: "Uncontrolled",
-    description: "Loads follow natural behavior with no coordination."
+    description: "Loads follow their natural pattern without coordination."
   },
   {
     id: "tou",
@@ -218,7 +218,7 @@ export const flexgridStrategyOptions: Array<{
   {
     id: "optimizer",
     label: "Constraint optimizer",
-    description: "A lightweight optimizer targets peak shaving, tariff exposure, and battery SoC limits."
+    description: "The optimizer solves peak clipping, tariff impact, and battery SoC bounds together."
   }
 ];
 
@@ -230,12 +230,12 @@ export const flexgridAnalysisOptions: Array<{
   {
     id: 1,
     label: "1 day",
-    description: "Fast 24-hour engineering snapshot."
+    description: "Fast 24-hour engineering view."
   },
   {
     id: 7,
     label: "7 days",
-    description: "Weekly profile with weekday/weekend variation and continuous battery SoC."
+    description: "Weekday/weekend variance and continuous battery SoC profile."
   }
 ];
 
@@ -263,12 +263,12 @@ export const flexgridTariffOptions: Array<{
   {
     id: "tou",
     label: "Time-of-use",
-    description: "Higher cost in daytime and evening peaks."
+    description: "Higher cost during daytime and evening peaks."
   },
   {
     id: "critical",
     label: "Critical peak",
-    description: "Strong penalty during the local peak window."
+    description: "Strong cost pressure during the local peak window."
   }
 ];
 
@@ -573,7 +573,7 @@ function buildAssets(chart: FlexgridScenarioPoint[]): FlexgridAssetContribution[
   return [
     {
       id: "building",
-      label: "Building base",
+      label: "Building base load",
       valueKw: peakPoint.buildingLoadKw,
       sharePct: Math.round((peakPoint.buildingLoadKw / total) * 100),
       status: "fixed"
@@ -608,46 +608,46 @@ function buildRecommendations(metrics: FlexgridScenarioMetrics, input: FlexgridS
   if (metrics.overloadHours > 0) {
     recommendations.push({
       priority: "high",
-      title: "Resolve transformer overload before scaling",
-      detail: `${metrics.overloadHours} simulated hour(s) exceed the kVA limit. Reduce coincident EV charging or increase storage support before adding more load.`
+      title: "Resolve transformer overload first",
+      detail: `${metrics.overloadHours} hours exceed the kVA limit. Reduce concurrent EV charging or reserve battery discharge for peak hours.`
     });
   } else if (metrics.transformerStress >= 85) {
     recommendations.push({
       priority: "high",
-      title: "Protect the local transformer first",
-      detail: "Peak stress is high. Keep EV charging below the local peak window and reserve battery discharge for the top two hours."
+      title: "Prioritize transformer stress reduction",
+      detail: "Peak stress is high. Move EV charging outside the local peak window and reserve battery discharge for the two heaviest hours."
     });
   }
 
   if (metrics.monthlySavingsTl >= 3000) {
     recommendations.push({
       priority: "medium",
-      title: "Turn this scenario into a demand-response playbook",
-      detail: "The current strategy produces visible monthly savings, so the next version should store events and compare planned vs actual reduction."
+      title: "Turn this scenario into an operating rule",
+      detail: "The current strategy produces monthly savings. Keep event logs with the same rule set and compare achieved reduction against the target."
     });
   }
 
   if (input.batteryMode === "none") {
     recommendations.push({
       priority: "medium",
-      title: "Model a small storage option",
-      detail: "A small battery is enough to demonstrate peak shaving without making the project hardware-heavy."
+      title: "Make storage impact visible",
+      detail: "The storage option compares how peak clipping affects cost and transformer stress in the same cockpit."
     });
   }
 
   if (input.evCount >= 6) {
     recommendations.push({
       priority: "low",
-      title: "Add EV session prioritization",
-      detail: "With more concurrent EVs, the next step is assigning charging priority by departure time and minimum required energy."
+      title: "Apply EV session priority",
+      detail: "When concurrent EV count increases, rank charging priority by departure time and minimum energy requirement."
     });
   }
 
   if (recommendations.length === 0) {
     recommendations.push({
       priority: "low",
-      title: "Ready for telemetry",
-      detail: "The scenario is stable enough for a virtual data feed or future ESP32/smart-plug measurement to replace one simulated channel."
+      title: "Ready for telemetry validation",
+      detail: "The scenario is balanced. Use CSV telemetry comparison to track measured versus modeled load deviation in the same report."
     });
   }
 
@@ -675,7 +675,7 @@ function buildComparison(input: FlexgridScenarioInput): FlexgridComparison[] {
 function buildSummary(site: FlexgridSiteProfile, metrics: FlexgridScenarioMetrics) {
   const horizon = metrics.analysisDays === 1 ? "24-hour" : "7-day";
 
-  return `${site.label} can reduce peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("en-US")} kW) and save about ${metrics.monthlySavingsTl.toLocaleString("en-US")} TL/month under this ${horizon} scenario.`;
+  return `${site.label} ${horizon} scenario reduces peak demand by ${metrics.peakReductionPct}% (${metrics.peakEventReductionKw.toLocaleString("en-US")} kW) and creates an estimated ${metrics.monthlySavingsTl.toLocaleString("en-US")} TL/month saving.`;
 }
 
 export function isFlexgridSiteType(value: string | null): value is FlexgridSiteType {

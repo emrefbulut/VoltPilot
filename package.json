@@ -1,8 +1,8 @@
 {
-  "name": "flexgrid-tr",
+  "name": "voltpilot",
   "version": "0.1.0",
   "private": true,
-  "description": "Turkish energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.",
+  "description": "Energy flexibility cockpit for EV charging, transformer loading, virtual grid signals, demand response, and telemetry validation.",
   "author": "Emre Bulut",
   "keywords": [
     "energy",

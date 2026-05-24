@@ -6,7 +6,7 @@ import {
   normalizeGridSignalInput
 } from "@/src/lib/energy/grid-signal";
 
-describe("FlexGrid public grid signal", () => {
+describe("VoltPilot public grid signal", () => {
   it("builds a deterministic 24-hour virtual grid profile", () => {
     const signal = buildDemoGridSignal({ provider: "demo", date: "2026-05-06" });
 
